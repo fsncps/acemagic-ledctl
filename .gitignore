@@ -1,0 +1,12 @@
+## default .gitignore
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+.env
+node_modules/
+dist/
+__pycache__/
