@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ledctl"
+version = "0.1.0"
+description = "T9 PLUS (CH340) LED controller and pattern hacks"
+readme = "README.md"
+authors = [{ name = "You", email = "you@example.com" }]
+license = { text = "MIT" }
+requires-python = ">=3.8"
+dependencies = ["pyserial>=3.5"]
+
+[project.scripts]
+ledctl = "ledctl.__main__:main"
+ledctl-setmode = "ledctl.cli.setmode:main"
+ledctl-pattern = "ledctl.cli.setpattern:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
