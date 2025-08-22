@@ -1,345 +1,542 @@
 # ledctl/cli/wizard.py
+"""
+LED wizard (curses, centered, sticky):
+  ↑/↓   move between fields
+  ←/→   change value
+  Enter apply current selection (built-ins = one-shot, patterns = background)
+  o     Off (one-shot)  — also kills any running pattern
+  q     Quit            — re-issues current selection so it "sticks"
+
+Notes:
+- Built-ins: single frame via core.send_frame_one_shot()
+- Patterns: background process via `python -m ledctl setpattern <pattern> ...` (detached)
+- Changing selection or applying clears any existing setpattern loops
+"""
+
 from __future__ import annotations
 
 import argparse
 import os
+import signal
 import subprocess
 import sys
-from dataclasses import dataclass
-from typing import Optional
+from typing import List, Tuple
 
-# ---- pretty output (Rich) ----
-try:
-    from rich.console import Console
-    from rich.panel import Panel
-    from rich.table import Table
-    from rich.box import ROUNDED
-
-    RICH = True
-    console = Console()
-except Exception:
-    RICH = False
-    console = None
-
-# ---- optional compact selectors ----
-try:
-    import questionary as q
-
-    Q = True
-except Exception:
-    Q = False
-
-# ---- ledctl libs ----
-from ledctl.core import BAUD_DEFAULT, IB_DELAY_DEFAULT
-from ledctl.core.core import find_ports
-from ledctl.core.setmode import set_builtin_mode
+from ledctl.core import (
+    BAUD_DEFAULT,
+    IB_DELAY_DEFAULT,
+    BUILTIN_MODES,
+    find_ports,
+    send_frame_one_shot,
+)
 from ledctl.patterns import list_patterns
-from ledctl.cli.setpattern import kill_all_patterns  # reuse the helper
+
+# Built-ins from core
+BUILTINS = set(BUILTIN_MODES.keys())
+
+# Pattern arg rules
+PATTERN_ONLY_B = {"stillred", "stillblue"}  # brightness only
+PATTERN_ONLY_NONE = {"alarm"}  # no args
+PATTERN_SPEED_PRESETS = {"breathered"}  # speed presets 1..4
+
+# -------------------- Human-facing info text --------------------
+
+MODE_INFO = {
+    "off": (
+        "Turn LEDs off immediately.\n"
+        "This sends a single frame to the controller; nothing keeps running afterward."
+    ),
+    "cycle": (
+        "Built-in device color cycle.\n"
+        "• Brightness (1..5): 1=dim ↔ 5=bright\n"
+        "• Speed (1..5): 1=fast ↔ 5=slow\n"
+        "Useful as a baseline test that the controller responds to frames."
+    ),
+    "breathing": (
+        "Built-in breathing effect using the device palette.\n"
+        "Controls behave like CYCLE (brightness & speed). Timing is handled by the firmware."
+    ),
+    "rainbow": (
+        "Built-in rainbow effect (multi-hue rotation).\n"
+        "Brightness and speed map as usual. If you see stepping, try lower speed."
+    ),
+}
+
+PATTERN_INFO = {
+    "stillred": (
+        "Solid red produced by repeatedly resetting the device CYCLE mode at high rate.\n"
+        "• Args: -b/--brightness only (1..5). Speed is ignored.\n"
+        "This is a host-driven loop (detached in background)."
+    ),
+    "stillblue": (
+        "Solid blue produced by repeatedly resetting the device RAINBOW mode at high rate.\n"
+        "• Args: -b/--brightness only (1..5). Speed is ignored.\n"
+        "Host-driven loop (detached)."
+    ),
+    "breathered": (
+        "Red-only breathing with measured preset pairs (speed → brightness,period).\n"
+        "Use -s 1..4:\n"
+        "  s=1 → b=4, ~5000 ms per cycle\n"
+        "  s=2 → b=3, ~4000 ms per cycle\n"
+        "  s=3 → b=2, ~3000 ms per cycle\n"
+        "  s=4 → b=1, ~1800 ms per cycle\n"
+        "Brightness from the UI is ignored; speed selects the preset."
+    ),
+    "alarm": (
+        "Aggressive blink meant to draw attention.\n"
+        "No adjustable arguments. Runs as a background loop until replaced or killed."
+    ),
+}
+
+GENERAL_INFO = (
+    "About the port (/dev/ttyUSB0): typically a CH340 USB↔TTL bridge connected to the LED MCU.\n"
+    "DTR/RTS: modem-control lines exposed by the USB bridge. Some devices gate power/logic based\n"
+    "on these signals. If you observe inconsistent behavior, try toggling DTR/RTS and re-apply."
+)
+
+# -------------------- enablement helpers --------------------
 
 
-BUILTIN_MODES = ("off", "rainbow", "breathing", "cycle", "auto")
-PATTERNS_ONLY_B = {"stillred", "stillblue"}  # brightness only
-PATTERNS_SPEED = {"breathered"}  # speed presets
-PATTERNS_NONE = {"alarm"}  # no args
+def brightness_enabled(name: str) -> bool:
+    if name in BUILTINS:
+        return True
+    if name in PATTERN_ONLY_B:
+        return True
+    if name in PATTERN_SPEED_PRESETS:
+        return False
+    if name in PATTERN_ONLY_NONE:
+        return False
+    return True
 
 
-@dataclass
-class LineOpts:
-    port: Optional[str] = None
-    baud: int = BAUD_DEFAULT
-    dtr: bool = True
-    rts: bool = False
-    delay: float = IB_DELAY_DEFAULT
+def speed_enabled(name: str) -> bool:
+    if name in BUILTINS:
+        return True
+    if name in PATTERN_ONLY_B:
+        return False
+    if name in PATTERN_SPEED_PRESETS:
+        return True
+    if name in PATTERN_ONLY_NONE:
+        return False
+    return True
 
 
-def _header(lo: LineOpts):
-    if not RICH:
-        print(
-            f"LEDCTL Wizard  |  Port={lo.port or '(auto)'}  Baud={lo.baud}  DTR={lo.dtr}  RTS={lo.rts}"
-        )
-        return
-    table = Table.grid(padding=(0, 1))
-    table.add_row("Port", lo.port or "(auto)")
-    table.add_row("Baud", str(lo.baud))
-    table.add_row("DTR", "ON" if lo.dtr else "OFF")
-    table.add_row("RTS", "ON" if lo.rts else "OFF")
-    console.print(Panel(table, title="LEDCTL — Wizard", box=ROUNDED, expand=False))
+# -------------------- pattern process helpers --------------------
 
 
-def _select_action() -> str:
-    actions = [
-        "Set built-in mode",
-        "Run custom pattern (background)",
-        "Stop running patterns",
-        "Settings (port/line)",
-        "Quit",
-    ]
-    if Q:
-        return q.select("Choose action:", actions).ask()
-    # fallback
-    print("\n".join(f"{i+1}. {a}" for i, a in enumerate(actions)))
-    i = input("Select> ").strip()
+def _pattern_pids() -> List[int]:
+    """Find running 'ledctl setpattern' processes (excluding self)."""
+    me = os.getpid()
+    pids: List[int] = []
     try:
-        idx = int(i) - 1
-        return actions[idx]
+        out = subprocess.check_output(["pgrep", "-f", r"ledctl.*setpattern"], text=True)
+        for s in out.splitlines():
+            if s.strip().isdigit():
+                pid = int(s.strip())
+                if pid != me:
+                    pids.append(pid)
+        return pids
     except Exception:
-        return "Quit"
-
-
-def _choose_port(current: Optional[str]) -> Optional[str]:
-    ports = find_ports() or []
-    ports_display = ["(auto)"] + ports
-    if Q:
-        sel = q.select(
-            "Serial port:", ports_display, default=(current or "(auto)")
-        ).ask()
-        return None if sel == "(auto)" else sel
-    # fallback
-    print("Ports:")
-    for i, p in enumerate(ports_display):
-        print(f" {i}) {p}")
-    s = input("index> ").strip()
-    try:
-        idx = int(s)
-        sel = ports_display[idx]
-        return None if sel == "(auto)" else sel
-    except Exception:
-        return current
-
-
-def _settings(lo: LineOpts):
-    while True:
-        _header(lo)
-        if Q:
-            choice = q.select(
-                "Settings:",
-                [
-                    f"Port ({lo.port or 'auto'})",
-                    f"Baud ({lo.baud})",
-                    f"DTR ({'ON' if lo.dtr else 'OFF'})",
-                    f"RTS ({'ON' if lo.rts else 'OFF'})",
-                    "Back",
-                ],
-            ).ask()
-        else:
-            print("1) Port")
-            print("2) Baud")
-            print("3) DTR toggle")
-            print("4) RTS toggle")
-            print("5) Back")
-            choice = {
-                "1": "Port",
-                "2": "Baud",
-                "3": "DTR",
-                "4": "RTS",
-                "5": "Back",
-            }.get(input("> ").strip(), "Back")
-
-        if choice.startswith("Port") or choice == "Port":
-            lo.port = _choose_port(lo.port)
-        elif choice.startswith("Baud") or choice == "Baud":
-            val = (
-                q.text("Baud:", default=str(lo.baud)).ask()
-                if Q
-                else input("Baud> ").strip()
-            )
-            try:
-                lo.baud = int(val)
-            except:
-                pass
-        elif choice.startswith("DTR") or choice == "DTR":
-            lo.dtr = not lo.dtr
-        elif choice.startswith("RTS") or choice == "RTS":
-            lo.rts = not lo.rts
-        else:
-            return
-
-
-def _apply_builtin(lo: LineOpts):
-    if Q:
-        mode = q.select("Mode:", list(BUILTIN_MODES), default="off").ask()
-    else:
-        print("\n".join(f"{i+1}. {m}" for i, m in enumerate(BUILTIN_MODES)))
-        try:
-            mode = BUILTIN_MODES[int(input("Mode> ").strip()) - 1]
-        except Exception:
-            mode = "off"
-
-    if mode == "off":
-        b = 3
-        s = 3
-    else:
-        if Q:
-            b = int(
-                q.select(
-                    "Brightness (1..5):", [str(i) for i in range(1, 6)], default="3"
-                ).ask()
-            )
-            s = int(
-                q.select(
-                    "Speed (1..5):", [str(i) for i in range(1, 6)], default="3"
-                ).ask()
-            )
-        else:
-            b = int(input("Brightness 1..5 [3]> ") or "3")
-            s = int(input("Speed 1..5 [3]> ") or "3")
-
-    # one-shot; no loops here
-    set_builtin_mode(
-        mode=mode,
-        brightness=b,
-        speed=s,
-        port=lo.port,
-        baud=lo.baud,
-        dtr=lo.dtr,
-        rts=lo.rts,
-        ib_delay=lo.delay,
-    )
-    if RICH:
-        console.print(f"[green]Applied[/green] {mode} b={b} s={s}")
-    else:
-        print(f"Applied {mode} b={b} s={s}")
-
-
-def _run_pattern_background(lo: LineOpts):
-    names = list_patterns()
-    if not names:
-        print("No patterns available.")
-        return
-
-    if Q:
-        name = q.select("Pattern:", names).ask()
-    else:
-        print("\n".join(f"{i+1}. {n}" for i, n in enumerate(names)))
-        try:
-            name = names[int(input("Pattern> ").strip()) - 1]
-        except Exception:
-            return
-
-    # figure args quickly
-    args = []
-    if name in PATTERNS_ONLY_B:
-        b = (
-            int(
-                q.select(
-                    "Brightness (1..5):", [str(i) for i in range(1, 6)], default="1"
-                ).ask()
-            )
-            if Q
-            else int(input("Brightness 1..5 [1]> ") or "1")
-        )
-        args += ["-b", str(b)]
-    elif name in PATTERNS_SPEED:
-        s = (
-            int(
-                q.select(
-                    "Speed preset (1..4):", [str(i) for i in range(1, 5)], default="1"
-                ).ask()
-            )
-            if Q
-            else int(input("Speed 1..4 [1]> ") or "1")
-        )
-        args += ["-s", str(s)]
-    elif name in PATTERNS_NONE:
         pass
-    else:
-        # generic: offer brightness/speed quickly
-        if Q:
-            if q.confirm("Set brightness?", default=False).ask():
-                b = int(
-                    q.select(
-                        "Brightness (1..5):", [str(i) for i in range(1, 6)], default="3"
-                    ).ask()
-                )
-                args += ["-b", str(b)]
-            if q.confirm("Set speed?", default=False).ask():
-                s = int(
-                    q.select(
-                        "Speed (1..5):", [str(i) for i in range(1, 6)], default="3"
-                    ).ask()
-                )
-                args += ["-s", str(s)]
-        else:
+    try:
+        out = subprocess.check_output(["ps", "-eo", "pid,cmd"], text=True)
+        for line in out.splitlines():
+            parts = line.strip().split(None, 1)
+            if len(parts) != 2:
+                continue
+            pid_s, cmd = parts
+            if not pid_s.isdigit():
+                continue
+            pid = int(pid_s)
+            if pid == me:
+                continue
+            if "ledctl" in cmd and " setpattern " in cmd and "grep" not in cmd:
+                pids.append(pid)
+    except Exception:
+        pass
+    return pids
+
+
+def _pattern_is_running(pattern: str) -> bool:
+    try:
+        out = subprocess.check_output(["ps", "-eo", "pid,cmd"], text=True)
+        needle = f" setpattern {pattern} "
+        return any(needle in f" {line} " for line in out.splitlines())
+    except Exception:
+        return False
+
+
+def _kill_running_patterns() -> int:
+    """SIGTERM then SIGKILL any setpattern processes. Return count found."""
+    pids = _pattern_pids()
+    if not pids:
+        return 0
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except Exception:
+            pass
+    try:
+        import time
+
+        time.sleep(0.5)
+    except Exception:
+        pass
+    survivors = set(_pattern_pids())
+    for pid in survivors:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except Exception:
+            pass
+    return len(pids)
+
+
+def _spawn_pattern_background(
+    *,
+    pattern: str,
+    port: str | None,
+    baud: int,
+    dtr: bool,
+    rts: bool,
+    brightness: int | None = None,
+    speed: int | None = None,
+) -> int | None:
+    """Detach a new `ledctl setpattern <pattern> ...` (like '&')."""
+    cmd = [sys.executable, "-m", "ledctl", "setpattern", pattern]
+    if port:
+        cmd += ["--port", port]
+    cmd += ["--baud", str(baud)]
+    cmd += ["--dtr"] if dtr else ["--no-dtr"]
+    cmd += ["--rts"] if rts else ["--no-rts"]
+    if (pattern in PATTERN_ONLY_B) and (brightness is not None):
+        cmd += ["-b", str(brightness)]
+    if (pattern in PATTERN_SPEED_PRESETS) and (speed is not None):
+        cmd += ["-s", str(max(1, min(4, int(speed))))]
+
+    with open(os.devnull, "wb") as devnull:
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=devnull,
+                stderr=devnull,
+                stdin=devnull,
+                preexec_fn=os.setsid,  # detach (nohup-like)
+                close_fds=True,
+                env=dict(os.environ, PYTHONUNBUFFERED="1"),
+            )
+            return proc.pid
+        except Exception:
+            return None
+
+
+# -------------------- centered curses UI --------------------
+
+
+def _wrap(text: str, width: int) -> list[str]:
+    """Simple word-wrap to a list of lines that fit `width`."""
+    import textwrap
+
+    wrapped: list[str] = []
+    for para in text.splitlines():
+        if not para.strip():
+            wrapped.append("")
+            continue
+        wrapped.extend(
+            textwrap.wrap(
+                para, width=width, break_long_words=False, replace_whitespace=False
+            )
+        )
+    return wrapped
+
+
+def _center_box(
+    stdscr, lines: list[str], title: str = "", highlight_rows: set[int] | None = None
+):
+    """Create a centered window sized to `lines` and render them (bold highlights)."""
+    import curses
+
+    H, W = stdscr.getmaxyx()
+
+    # Before drawing a differently-sized window, clear the background so old boxes don't linger.
+    stdscr.erase()
+    stdscr.refresh()
+
+    inner_width = max(60, *(len(ln) for ln in lines)) if lines else 60
+    inner_height = len(lines) + 4  # border + padding
+    w = min(W - 2, inner_width + 4)
+    h = min(H - 2, inner_height)
+    y0 = max(0, (H - h) // 2)
+    x0 = max(0, (W - w) // 2)
+    win = curses.newwin(h, w, y0, x0)
+    win.box()
+    if title:
+        try:
+            win.addstr(0, 2, f" {title} ", curses.A_BOLD)
+        except Exception:
             pass
 
-    # Always kill existing pattern loops before starting a new one
-    killed = kill_all_patterns()
-    if killed and RICH:
-        console.print(f"[yellow]Stopped {killed} running pattern(s)[/yellow]")
-    elif killed:
-        print(f"Stopped {killed} running pattern(s)")
+    # Render lines with optional bold for highlighted rows
+    highlight_rows = highlight_rows or set()
+    y = 2
+    for i, ln in enumerate(lines):
+        txt = ln[: max(0, w - 4)]
+        attr = curses.A_BOLD if i in highlight_rows else 0
+        try:
+            win.addstr(y, 2, txt, attr)
+        except Exception:
+            pass
+        y += 1
+        if y >= h - 1:
+            break
+    win.refresh()
 
-    # Build command for background run
-    cmd = [sys.executable, "-m", "ledctl", "setpattern", name] + args
-    # pass line opts (port/baud/dtr/rts/delay)
-    if lo.port:
-        cmd += ["-p", lo.port]
-    cmd += ["-B", str(lo.baud)]
-    if lo.dtr:
-        cmd += ["-t"]
-    else:
-        cmd += ["-T"]
-    if lo.rts:
-        cmd += ["-r"]
-    else:
-        cmd += ["-R"]
-    cmd += ["-d", str(lo.delay)]
 
-    # detach
-    subprocess.Popen(
-        cmd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        stdin=subprocess.DEVNULL,
-        preexec_fn=os.setsid,
-        close_fds=True,
+def _compose_lines(
+    port: str, cur: str, b: int, s: int, dtr: bool, rts: bool, max_width: int
+) -> list[str]:
+    """Build wrapped lines for the centered panel."""
+    header = "↑/↓ Field   ←/→ Change   Enter=Apply   o=Off   q=Quit (sticks)"
+    fields = [
+        f"Port:       {port}",
+        f"Name:       {cur}",
+        f"Brightness: {b}  (1..5){'' if brightness_enabled(cur) else '  [disabled]'}",
+        f"Speed:      {s}  (1..5){'' if speed_enabled(cur) else '  [disabled]'}",
+        f"DTR:        {'ON' if dtr else 'OFF'}",
+        f"RTS:        {'ON' if rts else 'OFF'}",
+    ]
+
+    info_block = []
+    if cur in BUILTINS:
+        info_block += _wrap(MODE_INFO.get(cur, ""), max_width)
+    else:
+        info_block += _wrap(PATTERN_INFO.get(cur, ""), max_width)
+
+    info_block += [""]
+    info_block += _wrap(GENERAL_INFO, max_width)
+
+    lines = [header, ""] + fields + [""] + info_block
+    return lines
+
+
+def _curses_ui(
+    port_hint: str | None, dtr: bool, rts: bool, delay: float
+) -> Tuple[str, int, int, bool, bool, str, bool]:
+    """Run the TUI and return the final selection + whether a pattern is running.
+    Returns: (name, bright, speed, dtr, rts, port, pattern_running_now)
+    """
+    import curses
+
+    ports = find_ports()
+    if not ports:
+        print("No CH340 tty found.")
+        return ("off", 3, 3, dtr, rts, port_hint or "", False)
+
+    port_idx = 0
+    if port_hint and port_hint in ports:
+        port_idx = ports.index(port_hint)
+
+    names = sorted(BUILTINS | set(list_patterns()))
+    if "off" in names:
+        names.remove("off")
+        names.insert(0, "off")
+
+    name_idx = 0
+    bright = 3
+    speed = 3
+    _dtr, _rts = dtr, rts
+    idx = 1  # field cursor: 0..5  (Port, Name, Brightness, Speed, DTR, RTS)
+    pattern_running = False
+
+    def draw(stdscr):
+        H, W = stdscr.getmaxyx()
+        # Compose lines with wrapping margin that fits the centered window nicely
+        wrap_w = max(60, min(W - 10, 100))
+        cur = names[name_idx]
+        lines = _compose_lines(ports[port_idx], cur, bright, speed, _dtr, _rts, wrap_w)
+
+        # Highlight the currently selected field row: header + blank + fields offset
+        field_base = 2  # header (0), blank (1), then fields start at line index 2
+        highlight_map = {
+            0: field_base + 0,  # Port
+            1: field_base + 1,  # Name
+            2: field_base + 2,  # Brightness
+            3: field_base + 3,  # Speed
+            4: field_base + 4,  # DTR
+            5: field_base + 5,  # RTS
+        }
+        hi = {highlight_map[idx]}
+        _center_box(stdscr, lines, title="LEDCTL Wizard", highlight_rows=hi)
+
+    def apply_current():
+        nonlocal pattern_running
+        _kill_running_patterns()
+        cur = names[name_idx]
+        port = ports[port_idx]
+        if cur in BUILTINS:
+            send_frame_one_shot(
+                port=port,
+                mode=BUILTIN_MODES[cur],
+                brightness=bright,
+                speed=speed,
+                baud=BAUD_DEFAULT,
+                dtr=_dtr,
+                rts=_rts,
+                ib_delay=delay,
+            )
+            pattern_running = False
+        else:
+            _spawn_pattern_background(
+                pattern=cur,
+                port=port,
+                baud=BAUD_DEFAULT,
+                dtr=_dtr,
+                rts=_rts,
+                brightness=bright if cur in PATTERN_ONLY_B else None,
+                speed=speed if cur in PATTERN_SPEED_PRESETS else None,
+            )
+            pattern_running = True
+
+    def main(stdscr):
+        nonlocal idx, port_idx, name_idx, bright, speed, _dtr, _rts, pattern_running
+        curses.curs_set(0)
+        draw(stdscr)
+        while True:
+            key = stdscr.getch()
+            if key in (ord("q"), ord("Q")):
+                cur = names[name_idx]
+                return (
+                    cur,
+                    bright,
+                    speed,
+                    _dtr,
+                    _rts,
+                    ports[port_idx],
+                    pattern_running,
+                )
+            if key in (ord("o"), ord("O")):
+                _kill_running_patterns()
+                send_frame_one_shot(
+                    port=ports[port_idx],
+                    mode=BUILTIN_MODES.get("off", list(BUILTIN_MODES.values())[0]),
+                    brightness=bright,
+                    speed=speed,
+                    baud=BAUD_DEFAULT,
+                    dtr=_dtr,
+                    rts=_rts,
+                    ib_delay=delay,
+                )
+                pattern_running = False
+                draw(stdscr)
+                continue
+
+            if key == curses.KEY_UP:
+                idx = (idx - 1) % 6
+            elif key == curses.KEY_DOWN:
+                idx = (idx + 1) % 6
+            elif key in (curses.KEY_LEFT, curses.KEY_RIGHT):
+                step = -1 if key == curses.KEY_LEFT else 1
+                cur = names[name_idx]
+                if idx == 0:
+                    ports[:] = find_ports() or ports
+                    if ports:
+                        port_idx = (port_idx + step) % len(ports)
+                elif idx == 1:
+                    name_idx = (name_idx + step) % len(names)
+                    _kill_running_patterns()
+                    pattern_running = False
+                elif idx == 2 and brightness_enabled(cur):
+                    bright = min(5, max(1, bright + step))
+                elif idx == 3 and speed_enabled(cur):
+                    speed = min(5, max(1, speed + step))
+                elif idx == 4:
+                    _dtr = not _dtr
+                elif idx == 5:
+                    _rts = not _rts
+            elif key in (curses.KEY_ENTER, 10, 13):
+                apply_current()
+            draw(stdscr)
+
+    import curses
+
+    return curses.wrapper(main)
+
+
+# -------------------- CLI shell --------------------
+
+
+def parse_args(argv=None):
+    p = argparse.ArgumentParser(
+        prog="ledctl wiz",
+        description=(
+            "Interactive wizard (curses). Built-ins apply instantly; patterns run in background.\n"
+            "On quit, the current selection is re-issued so it sticks."
+        ),
     )
+    p.add_argument("-d", "--dev", default=None, help="serial device (auto-detect)")
+    p.add_argument(
+        "--dtr",
+        dest="dtr",
+        action="store_true",
+        default=True,
+        help="assert DTR (default)",
+    )
+    p.add_argument("--no-dtr", dest="dtr", action="store_false", help="deassert DTR")
+    p.add_argument(
+        "--rts", dest="rts", action="store_true", default=False, help="assert RTS"
+    )
+    p.add_argument("--no-rts", dest="rts", action="store_false", help="deassert RTS")
+    p.add_argument(
+        "--delay", type=float, default=IB_DELAY_DEFAULT, help="inter-byte delay (sec)"
+    )
+    return p.parse_args(argv)
 
-    if RICH:
-        console.print(
-            f"[green]Started[/green] pattern [bold]{name}[/bold] in background"
-        )
+
+def _reissue_after_quit(
+    name: str, b: int, s: int, dtr: bool, rts: bool, port: str, pattern_running: bool
+):
+    """After curses exits, re-issue selection so it persists."""
+    if name in BUILTINS:
+        cmd = [
+            sys.executable,
+            "-m",
+            "ledctl",
+            "setmode",
+            name,
+            "-b",
+            str(b),
+            "-s",
+            str(s),
+        ]
+        if port:
+            cmd += ["--port", port]
+        cmd += ["--dtr" if dtr else "--no-dtr", "--rts" if rts else "--no-rts"]
+        cmd += ["--baud", str(BAUD_DEFAULT)]
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
-        print(f"Started pattern {name} in background")
+        if not _pattern_is_running(name):
+            _spawn_pattern_background(
+                pattern=name,
+                port=port if port else None,
+                baud=BAUD_DEFAULT,
+                dtr=dtr,
+                rts=rts,
+                brightness=b if name in PATTERN_ONLY_B else None,
+                speed=s if name in PATTERN_SPEED_PRESETS else None,
+            )
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(
-        prog="ledctl wiz",
-        description="Small wizard to set built-in modes or start/stop custom patterns.",
+    a = parse_args(argv)
+    ports = find_ports()
+    dev = a.dev or (ports[0] if ports else None)
+    if not dev:
+        print("No CH340 tty found.")
+        return 1
+
+    name, b, s, dtr, rts, port, pat_running = _curses_ui(
+        port_hint=dev, dtr=a.dtr, rts=a.rts, delay=a.delay
     )
-    # allow initial line opts (overridable in Settings)
-    p.add_argument("--port")
-    p.add_argument("--baud", type=int, default=BAUD_DEFAULT)
-    p.add_argument("--dtr", action="store_true", default=True)
-    p.add_argument("--no-dtr", dest="dtr", action="store_false")
-    p.add_argument("--rts", action="store_true", default=False)
-    p.add_argument("--no-rts", dest="rts", action="store_false")
-    p.add_argument("--delay", type=float, default=IB_DELAY_DEFAULT)
-    a = p.parse_args(argv)
-
-    lo = LineOpts(port=a.port, baud=a.baud, dtr=a.dtr, rts=a.rts, delay=a.delay)
-
-    if not Q and RICH:
-        console.print(
-            "[dim](Tip: install 'questionary' for nicer pickers: pip install questionary)[/dim]"
-        )
-
-    while True:
-        _header(lo)
-        act = _select_action()
-        if act == "Set built-in mode":
-            _apply_builtin(lo)
-        elif act == "Run custom pattern (background)":
-            _run_pattern_background(lo)
-        elif act == "Stop running patterns":
-            n = kill_all_patterns()
-            msg = f"Stopped {n} pattern process(es)"
-            console.print(f"[yellow]{msg}[/yellow]") if RICH else print(msg)
-        elif act == "Settings (port/line)":
-            _settings(lo)
-        else:
-            break
+    _reissue_after_quit(name, b, s, dtr, rts, port, pat_running)
     return 0
 
 

@@ -1,22 +1,54 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ledctl"
+name = "acemagic-ledctl"
 version = "0.1.0"
-description = "T9 PLUS (CH340) LED controller and pattern hacks"
-readme = "README.md"
-authors = [{ name = "You", email = "you@example.com" }]
-license = { text = "MIT" }
+description = "ACEMAGIC P9/P9 Plus (CH340) LED controller and pattern hacks"
+readme = { file = "README", content-type = "text/plain" }  # change to README.md if you actually have it
+authors = [{ name = "fsncps", email = "fsncps@eml.cc" }]
 requires-python = ">=3.8"
-dependencies = ["pyserial>=3.5"]
+dependencies = [
+  "pyserial>=3.5"
+]
+keywords = ["acemagic", "p9", "led", "ch340", "uart", "serial", "linux"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: System :: Hardware :: Hardware Drivers",
+  "Topic :: Utilities",
+]
+license = { file = "LICENSE" }
+
+[project.urls]
+Homepage = "https://example.com/acemagic-ledctl"
+Repository = "https://example.com/acemagic-ledctl.git"
+Issues = "https://example.com/acemagic-ledctl/issues"
 
 [project.scripts]
+# Main entry (python -m ledctl also works if __main__.py has main())
 ledctl = "ledctl.__main__:main"
-ledctl-setmode = "ledctl.cli.setmode:main"
-ledctl-pattern = "ledctl.cli.setpattern:main"
+
+# Provide dedicated commands, but route both to the same CLI if that's how yours is structured.
+# Your tree shows cli/set.py (not cli/setmode.py), so point both names to cli.set:main.
+ledctl-setmode = "ledctl.cli.set:main"
+ledctl-pattern = "ledctl.cli.set:main"
+ledctl-wizard = "ledctl.cli.wizard:main"
+
+[tool.setuptools]
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["ledctl*"]
+exclude = ["tests*", "docs*"]
 
