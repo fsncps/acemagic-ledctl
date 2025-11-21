@@ -7,7 +7,7 @@ Rumor has it that when you don't immediately nuke the Windows off one of the ACE
 You get a CLI tool with commands 
 - `ledctl off`
 - `ledctl setmode {cycle,rainbow,breathing} [OPTIONS]` (built-in LED controls)
-- `ledctl setpattern {stillred,stillblue,breathered,alarm} [OPTIONS]` (some hacks to add a few more, like red breathing of various speeds, and an alarm more. Be creative and add more)
+- `ledctl setpattern {stillred,stillblue,breathered,alarm} [OPTIONS]` (some hacks to add a few more, like red breathing of various speeds, and an alarm mode. Be creative and add more)
 - `ledctl wiz` (a small TUI menu to select or switch between modes quickly to test them)
 
 I wonder why there are no plain colours built in, but at least we can simulate a still red light by restarting the cycle mode with 50Hz, or the rainbow mode gives us a half blue / half purple light in this way, kind of pretty. The built-ins are mostly too colourful and too agitated, so I think these and the breathing red at different intensities are quite a plus if you want any LED at all. I would have just switched them off, but I want to use this box for rsyslogging among other things, so I have a nice visual status indicator now. Some daemon fails somewhere in my LAN and the log is send to the acemagic box, who informs me of the gravity of recent incidents by a series of increasingly irritating visual cues. Neat.
