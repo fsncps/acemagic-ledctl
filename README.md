@@ -7,12 +7,12 @@ Rumor has it that when you don't immediately nuke the Windows off one of the ACE
 You get a CLI tool with commands 
 - `ledctl off`
 - `ledctl setmode {cycle,rainbow,breathing} [OPTIONS]` (built-in LED controls)
-- `ledctl setpattern {stillred,stillblue,breathered,alarm} [OPTIONS]` (hacks for additional lighting modes ‡)
+- `ledctl setpattern {stillred,stillblue,breathered,alarm} [OPTIONS]` (hacks for additional lighting modes)
 - `ledctl wiz` (a small TUI menu to select or switch between modes quickly to test them)
 
-‡ *I really wonder why there are no plain colours built in by default, but at least a still red light (or, the illusion of it) can be simulated by strobing the cycle mode at a frequency of 50Hz. In a similar manner, I created a blue-and-purple still mode, as well as an uni-coloured breathing mode in red and a blinking "alarm" mode designed to alert, both with adjustable speed. I'm sure more are possible, inputs highly welcome!* 
+The built-ins are mostly too colourful and too agitated, so I think the added pattern hacks are quite a plus if you want any LED at all. I wondered why there are no plain colours built in by default, but at least I managed to simulate a still red light (or, the illusion of it) by strobing the cycle mode at a frequency of 50Hz. In a similar manner, I created a blue-and-purple still mode, as well as an uni-coloured breathing mode in red and a blinking "alarm" mode designed to alert, both with adjustable speed. I'm sure more are possible, inputs highly welcome!
 
-The built-ins are mostly too colourful and too agitated, so I think these and the breathing red at different intensities are quite a plus if you want any LED at all. I would have just switched them off, but I want to use this box for rsyslogging among other things, so I have a nice visual status indicator now. Some daemon fails somewhere in my LAN and the log is send to the acemagic box, which informs me of the incident, indicting the gravity of incidents by a series of increasingly irritating visual cues. Neat.
+I would have just switched them off, but I want to use this box for rsyslogging among other things and I have a nice visual status indicator now. When some daemon fails somewhere in my LAN and the log is send to the acemagic box, it alerts me of the incident and its gravity by a series of increasingly irritating visual cues. Neat.
 
 ---
 ### Compatibility & Installation
