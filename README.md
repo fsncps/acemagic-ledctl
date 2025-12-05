@@ -10,7 +10,9 @@ You get a CLI tool with commands
 - `ledctl setpattern {stillred,stillblue,breathered,alarm} [OPTIONS]` (some hacks to add a few more, like red breathing of various speeds, and an alarm mode. Be creative and add more)
 - `ledctl wiz` (a small TUI menu to select or switch between modes quickly to test them)
 
-I wonder why there are no plain colours built in, but at least we can simulate a still red light (or, the illusion of it) by strobing the cycle mode at a frequency of 50Hz. The rainbow mode gives us a half blue / half purple light in this way, kind of pretty. The built-ins are mostly too colourful and too agitated, so I think these and the breathing red at different intensities are quite a plus if you want any LED at all. I would have just switched them off, but I want to use this box for rsyslogging among other things, so I have a nice visual status indicator now. Some daemon fails somewhere in my LAN and the log is send to the acemagic box, which informs me of the incident, indicting the gravity of incidents by a series of increasingly irritating visual cues. Neat.
+I wonder why there are no plain colours built in, but at least we can simulate a still red light (or, the illusion of it) by strobing the cycle mode at a frequency of 50Hz. The rainbow mode gives us a half blue / half purple light in this way, kind of pretty. 
+
+The built-ins are mostly too colourful and too agitated, so I think these and the breathing red at different intensities are quite a plus if you want any LED at all. I would have just switched them off, but I want to use this box for rsyslogging among other things, so I have a nice visual status indicator now. Some daemon fails somewhere in my LAN and the log is send to the acemagic box, which informs me of the incident, indicting the gravity of incidents by a series of increasingly irritating visual cues. Neat.
 
 ---
 ### Compatibility & Installation
