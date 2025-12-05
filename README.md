@@ -83,6 +83,6 @@ dmesg | grep -i ch341                                # driver attached? (ttyUSBn
 #### Tuning flags you might touch
 - `-B/--baud` → **10000** (device default here)
 - `-t/--dtr` and `-R/--no-rts` → defaults are **DTR asserted**, **RTS deasserted**
-- `-d/--delay` → inter-byte delay (default **0.005 s**). If it’s sluggish, try `0.002`; if unreliable, raise to `0.006–0.010`.
+- `-d/--delay` → inter-byte delay (default **0.005 s**). If it’s sluggish, try 0.002; if unreliable, raise to 0.006–0.010.
 
 
