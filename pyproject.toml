@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "acemagic-ledctl"
-version = "0.1.0"
+version = "0.2.1"
 description = "ACEMAGIC P9/P9 Plus (CH340) LED controller and pattern hacks"
 readme = "README.md"
 license = { text = "MIT" }
