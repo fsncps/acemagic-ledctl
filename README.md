@@ -29,7 +29,7 @@ The tool talks to the LED microcontroller over a USB-to-UART bridge. On ACEMAGIC
 1) **Install python module**
 It's in PyPI, so you should be able to install directly with pip:
 ```bash
-pip install "acemagic-ledctl[ui]"   # or: pip install acemagic-ledctl
+pip install "acemagic-ledctl"
 ```
 Alternatively, in particular when you want to make changes, clone this repo and install from the local dir.
 
