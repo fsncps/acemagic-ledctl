@@ -5,90 +5,200 @@
 [![GitHub release](https://img.shields.io/github/v/release/fsncps/acemagic-ledctl.svg)](https://github.com/fsncps/acemagic-ledctl/releases)
 [![PyPI version](https://img.shields.io/pypi/v/acemagic-ledctl)](https://pypi.org/project/acemagic-ledctl/)
 
-Rumor has it that when you don't immediately nuke the Windows off one of the ACEMAGIC mini computers, you have a utility to control all the flashy and colourful fadenlights. Luckily, [smart and friendly people](https://www.reddit.com/r/MiniPCs/comments/18icusg/t9_plus_n100_how_to_control_led/) analyzed the serial stream and have posted the command sequences. so we don't need that bit of Windows bloatware to do just as much as switch the LEDs off. With my box and I assume with most others, just unplugging the module would be no hassle either – but if you want to set it to rainbow at a certain speed or even make some dynamic use of the modes, then this utility replaces the Windows-only solution by the vendor, adding CLI tool functionality and more lighting patterns. It should work with any ACEMAGIC box that has LED connected over a CH340 or CH341 bridge, or probably any other UART interface.
+`acemagic-ledctl` is a Linux CLI utility for controlling the LED controller found in some ACEMAGIC mini PCs over a USB-to-UART bridge, usually WCH CH340/CH341, reaplacing  the vendor's Windows-only LED utility with a scriptable CLI and adds extra pattern modes built on top of the observed serial protocol.
 
-### Functionality
 
-You get a CLI tool with commands 
-- `ledctl off`
-- `ledctl setmode {cycle,rainbow,breathing} [OPTIONS]` (built-in LED controls)
-- `ledctl setpattern {stillred,stillblue,breathered,alarm} [OPTIONS]` (hacks for additional lighting modes)
-- `ledctl wiz` (a small TUI menu to select or switch between modes quickly to test them)
+## Status
 
-The built-ins are mostly too colourful and too agitated, so I think the added pattern hacks are quite a plus if you want any LED at all. I wondered why there are no plain colours built in by default, but at least I managed to simulate a still red light (or, the illusion of it) by strobing the cycle mode at a frequency of 50Hz. In a similar manner, I created a blue-and-purple still mode, as well as an uni-coloured breathing mode in red and a blinking "alarm" mode designed to alert, both with adjustable speed. I'm sure more are possible, inputs highly welcome!
+- Current scope: ACEMAGIC T9/T9-class devices and similar variants using a CH34x bridge
+- Platform: Linux
+- Maturity: experimental but packaged and tested
+- Privilege model: root works by default; non-root use normally requires access to the serial device via group membership or udev rules
 
-I would have just switched them off, but I want to use this box for rsyslogging among other things and this gives me a nice visual status indicator. When some daemon fails somewhere in my LAN and the log is send to the acemagic box, it alerts me of the incident and its gravity by a series of increasingly irritating visual cues. Neat.
 
----
-### Compatibility & Installation
+## Features
 
-The tool talks to the LED microcontroller over a USB-to-UART bridge. On ACEMAGIC T9 variants this is usually a WCH CH340/CH341. Could work on any similar device with some tweaks. Check compatibilty, then veify you have the right device, then if necessary change UART byte sequence -- but with any ACEMAGIC box with a similar kind of LED module, expect this to Just Work™.
+When you don't immediately nuke the Windows off one of the ACEMAGIC mini computers, you have a utility to control all the flashy and colourful fadenlights. Luckily, the command sequencesare available online. With my box and I assume with most others, just unplugging the module would be no hassle either – but if you want to set it to rainbow at a certain speed or even make some dynamic use of the modes, then this utility replaces the Windows-only solution by the vendor, adding CLI tool functionality and more lighting patterns. 
 
-#### **Setup**
+- Turn LEDs off: `ledctl off`
+- Set built-in LED modes: `ledctl setmode {cycle,rainbow,breathing}`
+- Run custom pattern hacks: `ledctl setpattern {stillred,stillblue,breathered,alarm}`
+- Launch interactive wizard: `ledctl wiz`
+- Auto-detect common CH340/CH341 serial adapters
+- Override serial port, baud, DTR, RTS, and inter-byte delay
 
-1) **Install python module**
-It's in PyPI, so you should be able to install directly with pip:
+It should work with any ACEMAGIC box that has LED connected over a CH340 or CH341 bridge, or probably any other UART interface.
+
+
+## Installation
+
+Install from PyPI:
+
 ```bash
-pip install "acemagic-ledctl"
-```
-Alternatively, in particular when you want to make changes, clone this repo and install from the local dir.
-
-Then try auto-detect with a command like `ledctl wiz` or `ledctl setrainbow` under root privileges. This should work most of the time.
-
-2) **Ensure access**
-If you want to enable the tool for a non-root user, add it to the group your distro uses for serial according to udev group rules. Just look at the owner of the terminal `/dev/ttyUSB*` or find it under `/dev/serial/by-id/`. Typically  this is `dialout`, or `uucp` on more traditionally oriented systems like Slackware or Arch. Then start a new shell or reset it with the new group:
-```bash
-usermod -aG dialout "$USER"        # E.g. for Debian etc.
-newgrp dialout                     # To reset your existing shell 
+pip install acemagic-ledctl
 ```
 
-#### Troubleshoot
+For local development:
 
-*ledctl* tries to detect the port with your serial adapter as follows
-- Tries known **CH34x** VID/PIDs first.
-- Falls back to the first `/dev/ttyUSB*`, then `/dev/ttyACM*`.
-
-Reasons for failure could be several simultaneously connected UART/ACM adapters or an LED module that uses a different standard, like CP210x or FTDI, in which case you will have to manually specify the port to connect to. Find a stable path in `/dev/serial/by-id/` which mentions WCH, USB-Serial, CH340/341 or similar and execute ledctl with the necessary flags:     
 ```bash
+git clone https://github.com/fsncps/acemagic-ledctl.git
+cd acemagic-ledctl
+pip install -e ".[dev]"
+```
+
+## Quick start
+
+Try the wizard first:
+
+```bash
+ledctl wiz
+```
+
+Turn LEDs off:
+
+```bash
+ledctl off
+```
+
+Run a built-in mode explicitly:
+
+```bash
+ledctl setmode cycle -b 1 -s 3
+```
+
+Run a custom pattern with a fixed device path:
+
+```bash
+ledctl setpattern alarm --port /dev/serial/by-id/usb-...
+```
+
+## Device access
+
+On many systems the serial device is owned by a group such as `dialout` or `uucp`. Add your user to the correct group and start a new shell.
+
+Example for Debian-like systems:
+
+```bash
+sudo usermod -aG dialout "$USER"
+newgrp dialout
+```
+
+To discover the actual device and ownership:
+
+```bash
+ls -l /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
+ls -l /dev/serial/by-id/ 2>/dev/null
 python3 -m serial.tools.list_ports -v
-ledctl setmode cycle -b 1 -s 3 \
-  --port /dev/serial/by-id/usb-...
 ```
 
-If this works, you can create a stable alias, e.g. `/dev/ledctl`, for the device in the form of a custom udev rule:
+## Detection logic
+
+`ledctl` currently tries the following in order:
+
+1. Known CH34x VID/PIDs
+2. First `/dev/ttyUSB*`
+3. First `/dev/ttyACM*`
+
+If multiple adapters are connected, or if the device uses CP210x, FTDI, or something else, specify `--port` explicitly.
+
+## Stable udev alias
+
+If auto-detection is unreliable, create a stable symlink:
+
 ```bash
-tee /etc/udev/rules.d/99-ledctl.rules >/dev/null <<'RULE'
+sudo tee /etc/udev/rules.d/99-ledctl.rules >/dev/null <<'RULE'
 SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", SYMLINK+="ledctl", GROUP="dialout", MODE="0660"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="5523", SYMLINK+="ledctl", GROUP="dialout", MODE="0660"
 RULE
-#### then reload the udev rules:
-udevadm control --reload
-udevadm trigger
-#### and try again:
+
+sudo udevadm control --reload
+sudo udevadm trigger
+```
+
+Then use:
+
+```bash
 ledctl setmode breathing -p /dev/ledctl -B 10000 -t -R -d 0.005
 ```
 
-If your kernel does not see the device at all, check for hardware and driver issues. Use a different cable/port (no hubs) and check with `dmesg -w` while plugging and ensure driver is loaded using `modprobe`.
+## Troubleshooting
 
-#### Serial tuning flags to troubleshoot performance issues
-Global (for ledctl setpattern):
+### Device not found
+
+Check kernel detection while plugging the device:
+
 ```bash
---background (-g) — run pattern detached
---no-kill-existing — don’t terminate existing pattern loops
+dmesg -w
 ```
-Serial (parsed by ledctl, passed to the pattern runner):
+
+Check the driver state:
+
 ```bash
--p, --port PATH — serial device (by-id path recommended)
--B, --baud INT — baud rate (default from tool)
--t, --dtr / -T, --no-dtr — assert/deassert DTR
--r, --rts / -R, --no-rts — assert/deassert RTS
--d, --delay SEC — inter-byte delay (default **0.005 s**). If it’s sluggish, try 0.002; if unreliable, raise to 0.006–0.010.
+lsmod | grep -E 'ch34|usbserial'
+sudo modprobe ch341
 ```
-Pattern-common (only if the pattern’s run() supports them):
+
+Try a different cable, a different port, and avoid hubs while testing.
+
+### Wrong adapter detected
+
+Use a fixed by-id path:
+
 ```bash
+ledctl setmode cycle -b 1 -s 3 --port /dev/serial/by-id/usb-...
+```
+
+### Timing problems
+
+If the device responds sluggishly or inconsistently, adjust the inter-byte delay:
+
+```bash
+ledctl setmode breathing -d 0.002
+ledctl setmode breathing -d 0.008
+```
+
+## CLI notes
+
+Global pattern controls:
+
+```text
+--background / -g
+--no-kill-existing
+```
+
+Serial controls:
+
+```text
+-p, --port PATH
+-B, --baud INT
+-t, --dtr / -T, --no-dtr
+-r, --rts / -R, --no-rts
+-d, --delay SEC
+```
+
+Pattern-common controls when supported by the pattern implementation:
+
+```text
 -b, --brightness 1..5
 -s, --speed 1..5
 --period SEC
---mode-num BYTE (e.g. 0x03)
+--mode-num BYTE
 --hz FLOAT
 ```
+
+## Security
+
+This is a hardware-control tool, not a sandbox. It writes bytes to a serial device chosen by auto-detection or by explicit path. Review `SECURITY.md` before deploying it on systems where incorrect device selection could matter.
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Release process](docs/release-process.md)
+- [Roadmap](ROADMAP.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [License notes](docs/license-choice.md)
+
+## Attribution
+
+The serial protocol work was informed by public reverse-engineering discussion from the MiniPCs community. The implementation here is an independent Linux CLI around those observations.

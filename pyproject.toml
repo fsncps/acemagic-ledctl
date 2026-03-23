@@ -7,7 +7,7 @@ name = "acemagic-ledctl"
 version = "0.2.2"
 description = "ACEMAGIC P9/P9 Plus (CH340) LED controller and pattern hacks"
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "GPL 3.0 or later" }
 authors = [{ name = "fsncps", email = "fsncps@eml.cc" }]
 requires-python = ">=3.8"
 dependencies = ["pyserial>=3.5"]
