@@ -17,9 +17,7 @@ def main(argv=None):
     sp_wiz = sub.add_parser("wiz", help="interactive wizard / helpers", add_help=False)
     sp_wiz.set_defaults(_entry="ledctl.cli.wizard:main")
 
-    sp_setmode = sub.add_parser(
-        "setmode", help="set a built-in mode once", add_help=False
-    )
+    sp_setmode = sub.add_parser("setmode", help="set a built-in mode once", add_help=False)
     sp_setmode.set_defaults(_entry="ledctl.cli.setmode:main")
 
     sp_setpattern = sub.add_parser(

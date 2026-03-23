@@ -242,16 +242,12 @@ def _wrap(text: str, width: int) -> list[str]:
             wrapped.append("")
             continue
         wrapped.extend(
-            textwrap.wrap(
-                para, width=width, break_long_words=False, replace_whitespace=False
-            )
+            textwrap.wrap(para, width=width, break_long_words=False, replace_whitespace=False)
         )
     return wrapped
 
 
-def _center_box(
-    stdscr, lines: list[str], title: str = "", highlight_rows: set[int] | None = None
-):
+def _center_box(stdscr, lines: list[str], title: str = "", highlight_rows: set[int] | None = None):
     """Create a centered window sized to `lines` and render them (bold highlights)."""
     import curses
 
@@ -456,8 +452,6 @@ def _curses_ui(
                 apply_current()
             draw(stdscr)
 
-    import curses
-
     return curses.wrapper(main)
 
 
@@ -481,13 +475,9 @@ def parse_args(argv=None):
         help="assert DTR (default)",
     )
     p.add_argument("--no-dtr", dest="dtr", action="store_false", help="deassert DTR")
-    p.add_argument(
-        "--rts", dest="rts", action="store_true", default=False, help="assert RTS"
-    )
+    p.add_argument("--rts", dest="rts", action="store_true", default=False, help="assert RTS")
     p.add_argument("--no-rts", dest="rts", action="store_false", help="deassert RTS")
-    p.add_argument(
-        "--delay", type=float, default=IB_DELAY_DEFAULT, help="inter-byte delay (sec)"
-    )
+    p.add_argument("--delay", type=float, default=IB_DELAY_DEFAULT, help="inter-byte delay (sec)")
     return p.parse_args(argv)
 
 

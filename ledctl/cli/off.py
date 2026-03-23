@@ -5,6 +5,7 @@ Examples:
   ledctl off
   ledctl off -p /dev/ttyUSB0 -B 10000 -T -R -d 0.005
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,12 +39,8 @@ def parse_args(argv=None):
         default=BAUD_DEFAULT,
         help="baud rate (default: %(default)s)",
     )
-    p.add_argument(
-        "-t", "--dtr", action="store_true", default=True, help="assert DTR (default)"
-    )
-    p.add_argument(
-        "-T", "--no-dtr", dest="dtr", action="store_false", help="deassert DTR"
-    )
+    p.add_argument("-t", "--dtr", action="store_true", default=True, help="assert DTR (default)")
+    p.add_argument("-T", "--no-dtr", dest="dtr", action="store_false", help="deassert DTR")
     p.add_argument("-r", "--rts", action="store_true", default=False, help="assert RTS")
     p.add_argument(
         "-R",

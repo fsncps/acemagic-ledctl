@@ -35,7 +35,5 @@ def __getattr__(name):
     if name in ("set_builtin_mode", "resolve_mode"):
         from .setmode import set_builtin_mode, resolve_mode
 
-        return {"set_builtin_mode": set_builtin_mode, "resolve_mode": resolve_mode}[
-            name
-        ]
+        return {"set_builtin_mode": set_builtin_mode, "resolve_mode": resolve_mode}[name]
     raise AttributeError(name)

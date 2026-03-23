@@ -6,12 +6,11 @@ build-backend = "setuptools.build_meta"
 name = "acemagic-ledctl"
 version = "0.1.0"
 description = "ACEMAGIC P9/P9 Plus (CH340) LED controller and pattern hacks"
-readme = { file = "README", content-type = "text/plain" }  # change to README.md if you actually have it
+readme = "README.md"
+license = { text = "MIT" }
 authors = [{ name = "fsncps", email = "fsncps@eml.cc" }]
 requires-python = ">=3.8"
-dependencies = [
-  "pyserial>=3.5"
-]
+dependencies = ["pyserial>=3.5"]
 keywords = ["acemagic", "p9", "led", "ch340", "uart", "serial", "linux"]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -27,22 +26,20 @@ classifiers = [
   "Topic :: System :: Hardware :: Hardware Drivers",
   "Topic :: Utilities",
 ]
-license = { file = "LICENSE" }
 
 [project.urls]
-Homepage = "https://example.com/acemagic-ledctl"
-Repository = "https://example.com/acemagic-ledctl.git"
-Issues = "https://example.com/acemagic-ledctl/issues"
+Homepage = "https://github.com/fsncps/acemagic-ledctl"
+Repository = "https://github.com/fsncps/acemagic-ledctl.git"
+Issues = "https://github.com/fsncps/acemagic-ledctl/issues"
 
 [project.scripts]
-# Main entry (python -m ledctl also works if __main__.py has main())
 ledctl = "ledctl.__main__:main"
-
-# Provide dedicated commands, but route both to the same CLI if that's how yours is structured.
-# Your tree shows cli/set.py (not cli/setmode.py), so point both names to cli.set:main.
-ledctl-setmode = "ledctl.cli.set:main"
-ledctl-pattern = "ledctl.cli.set:main"
+ledctl-setmode = "ledctl.cli.setmode:main"
+ledctl-pattern = "ledctl.cli.setpattern:main"
 ledctl-wizard = "ledctl.cli.wizard:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "ruff>=0.1"]
 
 [tool.setuptools]
 include-package-data = true
@@ -52,3 +49,12 @@ where = ["."]
 include = ["ledctl*"]
 exclude = ["tests*", "docs*"]
 
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

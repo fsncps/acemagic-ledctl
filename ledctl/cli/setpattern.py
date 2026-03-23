@@ -44,9 +44,7 @@ def _list_pattern_pids() -> list[int]:
     pids: list[int] = []
     me = os.getpid()
     try:
-        out = subprocess.check_output(
-            ["ps", "-eo", "pid,args"], text=True, errors="ignore"
-        )
+        out = subprocess.check_output(["ps", "-eo", "pid,args"], text=True, errors="ignore")
     except Exception:
         return pids
     for line in out.splitlines():
@@ -61,11 +59,7 @@ def _list_pattern_pids() -> list[int]:
         if pid == me:
             continue
         # Match both "python -m ledctl setpattern ..." and "ledctl setpattern ..."
-        if (
-            "ledctl" in args
-            and " setpattern " in f" {args} "
-            and " setpattern kill" not in args
-        ):
+        if "ledctl" in args and " setpattern " in f" {args} " and " setpattern kill" not in args:
             pids.append(pid)
     return pids
 
@@ -106,14 +100,10 @@ _COMMON_CANDIDATES = {
         flags=("-s", "--speed"),
         kwargs=dict(type=int, choices=range(1, 6), help="speed 1..5"),
     ),
-    "period": dict(
-        flags=("--period",), kwargs=dict(type=float, help="seconds per cycle")
-    ),
+    "period": dict(flags=("--period",), kwargs=dict(type=float, help="seconds per cycle")),
     "mode_num": dict(
         flags=("--mode-num",),
-        kwargs=dict(
-            type=lambda x: int(x, 0), help="override raw MODE byte (e.g., 0x03)"
-        ),
+        kwargs=dict(type=lambda x: int(x, 0), help="override raw MODE byte (e.g., 0x03)"),
     ),
     "hz": dict(flags=("--hz",), kwargs=dict(type=float, help="loop frequency (Hz)")),
 }
@@ -251,17 +241,13 @@ def _print_list(names: list[str]) -> int:
             mod = _pattern_module(name)
             run_sig = inspect.signature(mod.run)  # type: ignore
             params = [
-                p
-                for p in run_sig.parameters
-                if p not in ("port", "baud", "dtr", "rts", "ib_delay")
+                p for p in run_sig.parameters if p not in ("port", "baud", "dtr", "rts", "ib_delay")
             ]
             print(f"  {name:12s}  args: {', '.join(params) if params else '(none)'}")
         except Exception as e:
             print(f"  {name:12s}  (error introspecting: {e})")
     print()
-    print(
-        "Hints: brightness (-b), speed (-s), period (--period), mode_num (--mode-num), hz (--hz)"
-    )
+    print("Hints: brightness (-b), speed (-s), period (--period), mode_num (--mode-num), hz (--hz)")
     return 0
 
 

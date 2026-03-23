@@ -55,9 +55,7 @@ def checksum(mode: int, bw: int, sw: int) -> int:
     return (0xFA + mode + bw + sw) & 0xFF
 
 
-def build_frame(
-    mode: int, bright_h: int, speed_h: int
-) -> Tuple[int, int, int, int, int]:
+def build_frame(mode: int, bright_h: int, speed_h: int) -> Tuple[int, int, int, int, int]:
     if bright_h not in LEVEL_TO_WIRE or speed_h not in LEVEL_TO_WIRE:
         raise ValueError("brightness/speed must be in 1..5")
     bw = LEVEL_TO_WIRE[bright_h]
