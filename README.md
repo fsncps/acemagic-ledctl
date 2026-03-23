@@ -1,6 +1,7 @@
 ## ACEMAGIC T9 Mini Computer LED Control
 
 [![CI](https://github.com/fsncps/acemagic-ledctl/actions/workflows/ci.yml/badge.svg)](https://github.com/fsncps/acemagic-ledctl/actions/workflows/ci.yml)
+
 [![Codacy Security Scan](https://github.com/fsncps/acemagic-ledctl/actions/workflows/codacy.yml/badge.svg)](https://github.com/fsncps/acemagic-ledctl/actions/workflows/codacy.yml)
 
 Rumor has it that when you don't immediately nuke the Windows off one of the ACEMAGIC mini computers, you have a utility to control all the flashy and colourful fadenlights. Luckily, [smart and friendly people](https://www.reddit.com/r/MiniPCs/comments/18icusg/t9_plus_n100_how_to_control_led/) analyzed the serial stream and have posted the command sequences. so we don't need that bit of Windows bloatware to do just as much as switch the LEDs off. With my box and I assume with most others, just unplugging the module would be no hassle either – but if you want to set it to rainbow at a certain speed or even make some dynamic use of the modes, then this utility replaces the Windows-only solution by the vendor, adding CLI tool functionality and more lighting patterns. It should work with any ACEMAGIC box that has LED connected over a CH340 or CH340 bridge, or probably any other UART interface.
