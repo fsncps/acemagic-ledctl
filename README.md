@@ -5,7 +5,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/fsncps/acemagic-ledctl.svg)](https://github.com/fsncps/acemagic-ledctl/releases)
 [![PyPI version](https://img.shields.io/pypi/v/acemagic-ledctl)](https://pypi.org/project/acemagic-ledctl/)
 
-`acemagic-ledctl` is a Linux CLI utility for controlling the LED controller found in some ACEMAGIC mini PCs over a USB-to-UART bridge, usually WCH CH340/CH341, reaplacing  the vendor's Windows-only LED utility with a scriptable CLI and adds extra pattern modes built on top of the observed serial protocol.
+A Linux CLI utility for controlling the LED controller found in some ACEMAGIC mini PCs over a USB-to-UART bridge, usually WCH CH340/CH341, reaplacing  the vendor's Windows-only LED utility with a scriptable CLI and adds extra pattern modes built on top of the observed serial protocol.
 
 
 ## Status
