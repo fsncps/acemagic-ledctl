@@ -48,7 +48,7 @@ newgrp dialout                     # To reset your existing shell
 - Tries known **CH34x** VID/PIDs first.
 - Falls back to the first `/dev/ttyUSB*`, then `/dev/ttyACM*`.
 
-Reasons for failure could be several simultaneously connected UART/ACM adapters or an LED module that uses a different standard, like CP210x or FTDI, in which case you will have to manually specify the port to connect to. Find a stable path in `/dev/serial/by-id/` which mentions WCH, USB-Serial, CH340 or similar and execute ledctl with the necessary flags:     
+Reasons for failure could be several simultaneously connected UART/ACM adapters or an LED module that uses a different standard, like CP210x or FTDI, in which case you will have to manually specify the port to connect to. Find a stable path in `/dev/serial/by-id/` which mentions WCH, USB-Serial, CH340/341 or similar and execute ledctl with the necessary flags:     
 ```bash
 python3 -m serial.tools.list_ports -v
 ledctl setmode cycle -b 1 -s 3 \
