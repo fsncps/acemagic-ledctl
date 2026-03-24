@@ -22,22 +22,12 @@ def parse_args(argv=None):
         prog="ledctl-setmode", description="Send a mode frame (optionally repeat)."
     )
     g = p.add_mutually_exclusive_group(required=False)
-    g.add_argument(
-        "--mode", choices=["breath", "cycle", "off", "rainbow"], help="Named mode"
-    )
-    g.add_argument(
-        "--mode-num", type=lambda x: int(x, 0), help="Raw mode byte (e.g., 0x03)"
-    )
+    g.add_argument("--mode", choices=["breath", "cycle", "off", "rainbow"], help="Named mode")
+    g.add_argument("--mode-num", type=lambda x: int(x, 0), help="Raw mode byte (e.g., 0x03)")
 
-    p.add_argument(
-        "--brightness", "-b", type=int, default=3, help="1..5 human scale (default 3)"
-    )
-    p.add_argument(
-        "--speed", "-s", type=int, default=3, help="1..5 human scale (default 3)"
-    )
-    p.add_argument(
-        "--hz", type=float, default=0.0, help="If >0, repeat at this frequency"
-    )
+    p.add_argument("--brightness", "-b", type=int, default=3, help="1..5 human scale (default 3)")
+    p.add_argument("--speed", "-s", type=int, default=3, help="1..5 human scale (default 3)")
+    p.add_argument("--hz", type=float, default=0.0, help="If >0, repeat at this frequency")
     p.add_argument("--port", help="Serial device (auto-detect if omitted)")
     p.add_argument("--baud", type=int, default=10000)
     p.add_argument("--dtr", dest="dtr", action="store_true", default=True)

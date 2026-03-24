@@ -3,9 +3,7 @@ from ledctl.patterns import run_pattern, list_patterns
 
 
 def parse_args(argv=None):
-    p = argparse.ArgumentParser(
-        prog="ledctl-pattern", description="Run a predefined pattern."
-    )
+    p = argparse.ArgumentParser(prog="ledctl-pattern", description="Run a predefined pattern.")
     p.add_argument("name", choices=list_patterns(), help="Pattern name")
     p.add_argument("--port", help="Serial device (auto-detect if omitted)")
     p.add_argument("--baud", type=int, default=10000)
@@ -14,12 +12,8 @@ def parse_args(argv=None):
     p.add_argument("--rts", dest="rts", action="store_true", default=False)
     p.add_argument("--no-rts", dest="rts", action="store_false")
     # generic knobs many patterns honor:
-    p.add_argument(
-        "--hz", type=float, default=None, help="Refresh frequency (if applicable)"
-    )
-    p.add_argument(
-        "--brightness", "-b", type=int, default=None, help="1..5 human scale"
-    )
+    p.add_argument("--hz", type=float, default=None, help="Refresh frequency (if applicable)")
+    p.add_argument("--brightness", "-b", type=int, default=None, help="1..5 human scale")
     p.add_argument("--speed", "-s", type=int, default=None, help="1..5 human scale")
     p.add_argument(
         "--period",
