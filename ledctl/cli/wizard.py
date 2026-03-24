@@ -1,4 +1,7 @@
-import sys, time, glob, argparse
+import argparse
+import glob
+import sys
+import time
 
 try:
     import serial
@@ -72,9 +75,7 @@ Notes:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=epilog,
     )
-    p.add_argument(
-        "-d", "--dev", default=None, help="serial device (auto-detect if omitted)"
-    )
+    p.add_argument("-d", "--dev", default=None, help="serial device (auto-detect if omitted)")
     p.add_argument(
         "--dtr",
         dest="dtr",
@@ -83,12 +84,8 @@ Notes:
         help="assert DTR (default)",
     )
     p.add_argument("--no-dtr", dest="dtr", action="store_false", help="deassert DTR")
-    p.add_argument(
-        "--rts", dest="rts", action="store_true", default=False, help="assert RTS"
-    )
-    p.add_argument(
-        "--no-rts", dest="rts", action="store_false", help="deassert RTS (default)"
-    )
+    p.add_argument("--rts", dest="rts", action="store_true", default=False, help="assert RTS")
+    p.add_argument("--no-rts", dest="rts", action="store_false", help="deassert RTS (default)")
     p.add_argument(
         "--delay",
         type=float,
@@ -104,9 +101,7 @@ Notes:
     sp.add_argument("-s", "--speed", type=int, default=3, choices=range(1, 6))
 
     sp = sub.add_parser("blink", help="alternate between two states")
-    sp.add_argument(
-        "--a", dest="mode_a", required=True, choices=MODE_NAMES, help="first mode"
-    )
+    sp.add_argument("--a", dest="mode_a", required=True, choices=MODE_NAMES, help="first mode")
     sp.add_argument(
         "--bmode",
         dest="mode_b",
@@ -282,7 +277,7 @@ def text_interactive(dev, dtr, rts, delay):
     _dtr, _rts = dtr, rts
     try:
         send_frame(port, MODES[cur_mode], cur_b, cur_s, _dtr, _rts, delay)
-    except:
+    except Exception:
         pass
 
     def ask(prompt, valid):
@@ -302,7 +297,7 @@ def text_interactive(dev, dtr, rts, delay):
         if c == "q":
             try:
                 send_frame(port, MODES["off"], cur_b, cur_s, _dtr, _rts, delay)
-            except:
+            except Exception:
                 pass
             break
         elif c == "t":
@@ -326,16 +321,8 @@ def text_interactive(dev, dtr, rts, delay):
                 i = int(ask("index> ", set(str(x) for x in range(len(ports)))))
                 port = ports[i]
         elif c == "l":
-            _dtr = (
-                not _dtr
-                if input("Toggle DTR? (y/N) ").lower().startswith("y")
-                else _dtr
-            )
-            _rts = (
-                not _rts
-                if input("Toggle RTS? (y/N) ").lower().startswith("y")
-                else _rts
-            )
+            _dtr = not _dtr if input("Toggle DTR? (y/N) ").lower().startswith("y") else _dtr
+            _rts = not _rts if input("Toggle RTS? (y/N) ").lower().startswith("y") else _rts
         elif c == "o":
             send_frame(port, MODES["off"], cur_b, cur_s, _dtr, _rts, delay)
 
@@ -358,13 +345,9 @@ def main():
         count = 0
         try:
             while True:
-                send_frame(
-                    dev, MODES[a.mode_a], a.brightness, a.speed, a.dtr, a.rts, a.delay
-                )
+                send_frame(dev, MODES[a.mode_a], a.brightness, a.speed, a.dtr, a.rts, a.delay)
                 time.sleep(a.on_ms / 1000.0)
-                send_frame(
-                    dev, MODES[a.mode_b], a.brightness, a.speed, a.dtr, a.rts, a.delay
-                )
+                send_frame(dev, MODES[a.mode_b], a.brightness, a.speed, a.dtr, a.rts, a.delay)
                 time.sleep(a.off_ms / 1000.0)
                 count += 1
                 if a.times and count >= a.times:
