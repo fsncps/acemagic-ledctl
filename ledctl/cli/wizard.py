@@ -195,12 +195,12 @@ def tui(dev, dtr, rts, delay):
     def draw(stdscr):
         stdscr.clear()
         stdscr.addstr(0, 2, "T9 PLUS LED — Arrow keys to change; Enter=Apply; q=Quit")
-        bold_if(stdscr, 2, 2, f"Port:       {ports[port_idx]:<30}", idx == 0)
-        bold_if(stdscr, 3, 2, f"Mode:       {MODE_NAMES[mode_idx]:<10}", idx == 1)
-        bold_if(stdscr, 4, 2, f"Brightness: {bright}  (1..5)     ", idx == 2)
-        bold_if(stdscr, 5, 2, f"Speed:      {speed}  (1..5)     ", idx == 3)
-        bold_if(stdscr, 6, 2, f"DTR:        {'ON' if _dtr else 'OFF':<5}", idx == 4)
-        bold_if(stdscr, 7, 2, f"RTS:        {'ON' if _rts else 'OFF':<5}", idx == 5)
+        bold_if(stdscr, 2, 2, f"Port:       {ports[port_idx]}", idx == 0)
+        bold_if(stdscr, 3, 2, f"Mode:       {MODE_NAMES[mode_idx]}", idx == 1)
+        bold_if(stdscr, 4, 2, f"Brightness: {bright}  (1..5)", idx == 2)
+        bold_if(stdscr, 5, 2, f"Speed:      {speed}  (1..5)", idx == 3)
+        bold_if(stdscr, 6, 2, f"DTR:        {'ON' if _dtr else 'OFF'}", idx == 4)
+        bold_if(stdscr, 7, 2, f"RTS:        {'ON' if _rts else 'OFF'}", idx == 5)
 
         # buttons line, bold the selected one
         y = 9
