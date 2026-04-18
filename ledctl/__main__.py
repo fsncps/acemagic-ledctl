@@ -8,7 +8,7 @@ from ledctl.cli.wizard import main as wizard_main
 
 def main():
     parser = argparse.ArgumentParser(prog="ledctl", add_help=True)
-    sub = parser.add_subparsers(dest="cmd", required=True)
+    sub = parser.add_subparsers(dest="cmd")
 
     sub.add_parser("off", help="turn LEDs off")
     sub.add_parser("setmode", help="send a single mode frame or repeat")
@@ -25,7 +25,10 @@ def main():
         "pattern": pattern_main,
         "wiz": wizard_main,
     }
-    dispatch[args.cmd](rest)
+    if args.cmd is None:
+        wizard_main(rest)
+    else:
+        dispatch[args.cmd](rest)
 
 
 if __name__ == "__main__":
