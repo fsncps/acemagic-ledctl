@@ -77,3 +77,44 @@ def test_off_parse_args_defaults():
 def test_off_parse_args_with_port():
     args = off_parse_args(["--port", "/dev/ttyUSB0"])
     assert args.port == "/dev/ttyUSB0"
+
+
+def test_wiz_scan_parse_args():
+    from ledctl.cli.wizard import parse_args as wiz_parse_args
+
+    args = wiz_parse_args(["scan", "--from", "0x06", "--to", "0x1F", "--hold-ms", "800"])
+    assert args.m_from == 0x06
+    assert args.m_to == 0x1F
+    assert args.hold_ms == 800
+
+
+def test_wiz_set_parse_args():
+    from ledctl.cli.wizard import parse_args as wiz_parse_args
+
+    args = wiz_parse_args(["set", "off", "-b", "5", "-s", "3"])
+    assert args.mode == "off"
+    assert args.brightness == 5
+    assert args.speed == 3
+
+
+def test_wiz_main_accepts_argv(capsys):
+    from ledctl.cli.wizard import main as wiz_main
+
+    wiz_main(["list"])
+    out = capsys.readouterr().out
+    assert "rainbow: 0x01" in out
+    assert "off: 0x04" in out
+
+
+def test_main_no_args_defaults_to_wiz(monkeypatch):
+    from unittest.mock import MagicMock
+
+    import ledctl.__main__ as mod
+
+    mock_wiz = MagicMock()
+    monkeypatch.setattr(mod, "wizard_main", mock_wiz)
+
+    monkeypatch.setattr("sys.argv", ["ledctl"])
+    mod.main()
+
+    mock_wiz.assert_called_once_with([])
