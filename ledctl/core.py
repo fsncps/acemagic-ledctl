@@ -11,12 +11,12 @@ except ImportError as e:
 BAUD_DEFAULT = 10000
 IB_DELAY_DEFAULT = 0.005  # inter-byte delay, seconds
 
-# Verify these on your unit. CYCLE=0x03 and OFF=0x04 are known-good from your tests.
 MODE = SimpleNamespace(
+    RAINBOW=0x01,
     BREATH=0x02,
     CYCLE=0x03,
     OFF=0x04,
-    RAINBOW=0x05,
+    AUTO=0x05,
 )
 
 LEVEL_TO_WIRE = {1: 0x05, 2: 0x04, 3: 0x03, 4: 0x02, 5: 0x01}

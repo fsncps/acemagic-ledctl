@@ -8,10 +8,16 @@ def test_level_to_wire():
 
 
 def test_mode_constants():
+    assert MODE.RAINBOW == 0x01
     assert MODE.BREATH == 0x02
     assert MODE.CYCLE == 0x03
     assert MODE.OFF == 0x04
-    assert MODE.RAINBOW == 0x05
+    assert MODE.AUTO == 0x05
+
+
+def test_mode_values_sequential():
+    values = [MODE.RAINBOW, MODE.BREATH, MODE.CYCLE, MODE.OFF, MODE.AUTO]
+    assert values == [0x01, 0x02, 0x03, 0x04, 0x05]
 
 
 def test_baud_default():
@@ -28,9 +34,11 @@ def test_find_port_returns_string_or_none():
 
 
 def test_checksum_calculation():
-    assert (0xFA + MODE.CYCLE + LEVEL_TO_WIRE[3] + LEVEL_TO_WIRE[3]) & 0xFF == (
-        0xFA + 0x03 + 0x03 + 0x03
-    ) & 0xFF
+    for mode_val in [MODE.RAINBOW, MODE.BREATH, MODE.CYCLE, MODE.OFF, MODE.AUTO]:
+        bright_wire = LEVEL_TO_WIRE[3]
+        speed_wire = LEVEL_TO_WIRE[3]
+        expected = (0xFA + mode_val + bright_wire + speed_wire) & 0xFF
+        assert expected == (0xFA + mode_val + 0x03 + 0x03) & 0xFF
 
 
 def test_level_mapping_inverted():

@@ -1,18 +1,3 @@
-# #!/usr/bin/env python3
-# # ledctl — ACEMAGIC T9 PLUS LED controller (CH340 @ 10000 baud, 5ms inter-byte)
-# # - No args: arrow-key TUI (curses)
-# # - Subcommands: set, blink, pulse, list, scan
-# #
-# # Examples:
-# #   ledctl set off
-# #   ledctl set breathing -b 5 -s 5          # slow breathing, intense (max bright, slowest)
-# #   ledctl set cycle -b 3 -s 1              # fast cycle, medium bright
-# #   ledctl blink --a rainbow --b off --on-ms 150 --off-ms 150 --seconds 5
-# #   ledctl pulse --mode breathing --seconds 8 --min 2 --max 5 --speed 3
-# #
-########
-#######
-
 import argparse
 from ledctl.core import LedCtl, MODE
 
@@ -22,7 +7,11 @@ def parse_args(argv=None):
         prog="ledctl-setmode", description="Send a mode frame (optionally repeat)."
     )
     g = p.add_mutually_exclusive_group(required=False)
-    g.add_argument("--mode", choices=["breath", "cycle", "off", "rainbow"], help="Named mode")
+    g.add_argument(
+        "--mode",
+        choices=["auto", "breath", "cycle", "off", "rainbow"],
+        help="Named mode",
+    )
     g.add_argument("--mode-num", type=lambda x: int(x, 0), help="Raw mode byte (e.g., 0x03)")
 
     p.add_argument("--brightness", "-b", type=int, default=3, help="1..5 human scale (default 3)")
@@ -37,19 +26,19 @@ def parse_args(argv=None):
     return p.parse_args(argv)
 
 
+_NAMED_MODES = {
+    "auto": MODE.AUTO,
+    "breath": MODE.BREATH,
+    "cycle": MODE.CYCLE,
+    "off": MODE.OFF,
+    "rainbow": MODE.RAINBOW,
+}
+
+
 def _resolve_mode(args):
     if args.mode_num is not None:
         return args.mode_num
-    if args.mode == "breath":
-        return MODE.BREATH
-    if args.mode == "cycle":
-        return MODE.CYCLE
-    if args.mode == "off":
-        return MODE.OFF
-    if args.mode == "rainbow":
-        return MODE.RAINBOW
-    # default to cycle if neither given
-    return MODE.CYCLE
+    return _NAMED_MODES.get(args.mode, MODE.CYCLE)
 
 
 def main(argv=None):
