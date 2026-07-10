@@ -1,3 +1,7 @@
+from unittest.mock import MagicMock
+
+import pytest
+
 from ledctl.cli.off import parse_args as off_parse_args
 from ledctl.cli.setmode import parse_args, _resolve_mode
 from ledctl.core import MODE
@@ -20,6 +24,16 @@ def test_parse_args_with_mode():
     assert args.speed == 1
 
 
+def test_parse_args_breathing():
+    args = parse_args(["--mode", "breathing"])
+    assert args.mode == "breathing"
+
+
+def test_parse_args_breath_rejected():
+    with pytest.raises(SystemExit):
+        parse_args(["--mode", "breath"])  # hard rename, no alias
+
+
 def test_parse_args_mode_num():
     args = parse_args(["--mode-num", "0x03"])
     assert args.mode_num == 0x03
@@ -30,8 +44,8 @@ def test_parse_args_auto():
     assert args.mode == "auto"
 
 
-def test_resolve_mode_breath():
-    args = parse_args(["--mode", "breath"])
+def test_resolve_mode_breathing():
+    args = parse_args(["--mode", "breathing"])
     assert _resolve_mode(args) == MODE.BREATH
 
 
@@ -79,31 +93,88 @@ def test_off_parse_args_with_port():
     assert args.port == "/dev/ttyUSB0"
 
 
-def test_wiz_scan_parse_args():
-    from ledctl.cli.wizard import parse_args as wiz_parse_args
-
-    args = wiz_parse_args(["scan", "--from", "0x06", "--to", "0x1F", "--hold-ms", "800"])
-    assert args.m_from == 0x06
-    assert args.m_to == 0x1F
-    assert args.hold_ms == 800
+def test_off_parse_args_has_delay_default():
+    args = off_parse_args([])
+    assert args.ib_delay == 0.005
 
 
-def test_wiz_set_parse_args():
-    from ledctl.cli.wizard import parse_args as wiz_parse_args
-
-    args = wiz_parse_args(["set", "off", "-b", "5", "-s", "3"])
-    assert args.mode == "off"
-    assert args.brightness == 5
-    assert args.speed == 3
+def test_off_parse_args_delay_flag():
+    args = off_parse_args(["--delay", "0.008"])
+    assert args.ib_delay == 0.008
 
 
-def test_wiz_main_accepts_argv(capsys):
-    from ledctl.cli.wizard import main as wiz_main
+def test_off_parse_args_ib_delay_alias():
+    args = off_parse_args(["--ib-delay", "0.002"])
+    assert args.ib_delay == 0.002
 
-    wiz_main(["list"])
-    out = capsys.readouterr().out
-    assert "rainbow: 0x01" in out
-    assert "off: 0x04" in out
+
+def test_setmode_parse_args_has_baud_default():
+    args = parse_args([])
+    assert args.baud == 10000
+
+
+def test_setmode_parse_args_has_ib_delay_default():
+    args = parse_args([])
+    assert args.ib_delay == 0.005
+
+
+def test_setmode_brightness_choices_rejects_bad():
+    with pytest.raises(SystemExit):
+        parse_args(["-b", "9"])
+
+
+def test_setmode_speed_choices_rejects_bad():
+    with pytest.raises(SystemExit):
+        parse_args(["-s", "0"])
+
+
+def test_setpattern_parse_args_ib_delay():
+    from ledctl.cli.setpattern import parse_args as sp_parse_args
+
+    args = sp_parse_args(["alarm", "--delay", "0.003"])
+    assert args.ib_delay == 0.003
+
+
+def test_setpattern_main_forwards_ib_delay(monkeypatch):
+    import ledctl.cli.setpattern as sp
+
+    mock = MagicMock()
+    monkeypatch.setattr(sp, "run_pattern", mock)
+    sp.main(["alarm", "--delay", "0.004"])
+    _, kwargs = mock.call_args
+    assert kwargs.get("ib_delay") == 0.004
+
+
+def test_wiz_parse_args_defaults():
+    from ledctl.cli.wizard import parse_args
+
+    args = parse_args([])
+    assert args.ib_delay == 0.005
+    assert args.baud == 10000
+    assert args.dtr is True
+    assert args.rts is False
+    assert args.port is None
+
+
+def test_wiz_parse_args_rejects_old_subcommand():
+    from ledctl.cli.wizard import parse_args
+
+    with pytest.raises(SystemExit):
+        parse_args(["set", "off"])  # 'set' no longer exists
+
+
+def test_wiz_main_calls_tui(monkeypatch):
+    import ledctl.cli.wizard as w
+
+    called = {}
+
+    def fake_tui(port, dtr, rts, delay):
+        called["args"] = (port, dtr, rts, delay)
+
+    monkeypatch.setattr(w, "tui", fake_tui)
+    rc = w.main(["--baud", "12000"])
+    assert rc == 0
+    assert called["args"][1] is True  # dtr default
 
 
 def test_main_no_args_defaults_to_wiz(monkeypatch):
