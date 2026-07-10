@@ -24,7 +24,7 @@ Commands exposed to the user include:
 
 - `ledctl off`
 - `ledctl setmode ...`
-- `ledctl setpattern ...`
+- `ledctl pattern ...`
 - `ledctl wiz`
 
 Responsibilities:
@@ -66,7 +66,7 @@ Responsibilities:
 
 Current strategy is heuristic:
 
-1. known CH34x VID/PIDs
+1. `/dev/serial/by-path/*-if00-port0`
 2. first `/dev/ttyUSB*`
 3. first `/dev/ttyACM*`
 

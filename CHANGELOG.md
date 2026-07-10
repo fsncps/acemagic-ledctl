@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - UNRELEASED
+
+### Removed
+- Wizard subcommands `set`/`blink`/`pulse`/`list`/`scan` — `set` is now `ledctl setmode`;
+  the others were non-documented extras. `ledctl wiz`/bare `ledctl` still launch the TUI.
+- `--mode breath` (use `breathing`). No alias.
+- Wizard's `-d`/`--dev` (use `--port`).
+
+### Changed
+- Mode-name vocabulary standardised on `breathing` everywhere.
+- All subcommands now honour `--delay` (inter-byte delay); previously only the wizard did.
+- Serial flags (`--port`, `--baud`, `--dtr/--no-dtr`, `--rts/--no-rts`, `-d/--delay`)
+  are now shared via a single parent parser; no duplication.
+- Wizard `-d` now means `--delay` (matches README), not device.
+- Mode registry centralised in `ledctl.core` (`MODE` namespace + `MODES` dict + `MODE_NAMES`).
+- `ledctl setmode -b`/`-s` now reject out-of-range values (1..5) at parse time via `choices`.
+- `--help` after a subcommand now shows that subcommand's real serial flags (stub parsers
+  in `__main__.py` no longer swallow `--help`).
+
+### Added
+- `ledctl.core.find_ports()` (plural) and `MODES`/`MODE_NAMES` name registry.
+- `ledctl.cli.common.make_serial_parser()` shared parent parser for serial flags.
+- `tests/conftest.py` registry tripwire guarding `MODES` against drift from `MODE`.
+
 ## [0.3.0] - 2026-04-18
 
 ### Fixed

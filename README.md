@@ -21,8 +21,8 @@ A Linux CLI utility for controlling the LED controller found in some ACEMAGIC mi
 When you don't immediately nuke the Windows off one of the ACEMAGIC mini computers, you have a utility to control all the flashy and colourful fadenlights. Luckily, the command sequencesare available online. With my box and I assume with most others, just unplugging the module would be no hassle either – but if you want to set it to rainbow at a certain speed or even make some dynamic use of the modes, then this utility replaces the Windows-only solution by the vendor, adding CLI tool functionality and more lighting patterns. 
 
 - Turn LEDs off: `ledctl off`
-- Set built-in LED modes: `ledctl setmode {cycle,rainbow,breathing}`
-- Run custom pattern hacks: `ledctl setpattern {stillred,stillblue,breathered,alarm}`
+- Set built-in LED modes: `ledctl setmode {cycle,rainbow,breathing,off,auto}`
+- Run custom pattern hacks: `ledctl pattern {stillred,stillblue,breathered,alarm}`
 - Launch interactive wizard: `ledctl wiz`
 - Auto-detect common CH340/CH341 serial adapters
 - Override serial port, baud, DTR, RTS, and inter-byte delay
@@ -48,6 +48,10 @@ pip install -e ".[dev]"
 
 ## Quick start
 
+Running `ledctl` with no subcommand launches the interactive curses TUI
+(same as `ledctl wiz`). Serial flags go *after* the subcommand:
+`ledctl off --baud 12000`, not `ledctl --baud 12000 off`.
+
 Try the wizard first:
 
 ```bash
@@ -69,7 +73,7 @@ ledctl setmode cycle -b 1 -s 3
 Run a custom pattern with a fixed device path:
 
 ```bash
-ledctl setpattern alarm --port /dev/serial/by-id/usb-...
+ledctl pattern alarm --port /dev/serial/by-id/usb-...
 ```
 
 ## Device access
@@ -95,7 +99,7 @@ python3 -m serial.tools.list_ports -v
 
 `ledctl` currently tries the following in order:
 
-1. Known CH34x VID/PIDs
+1. `/dev/serial/by-path/*-if00-port0`
 2. First `/dev/ttyUSB*`
 3. First `/dev/ttyACM*`
 
