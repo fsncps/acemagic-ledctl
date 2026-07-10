@@ -21,8 +21,8 @@ A Linux CLI utility for controlling the LED controller found in some ACEMAGIC mi
 When you don't immediately nuke the Windows off one of the ACEMAGIC mini computers, you have a utility to control all the flashy and colourful fadenlights. Luckily, the command sequencesare available online. With my box and I assume with most others, just unplugging the module would be no hassle either – but if you want to set it to rainbow at a certain speed or even make some dynamic use of the modes, then this utility replaces the Windows-only solution by the vendor, adding CLI tool functionality and more lighting patterns. 
 
 - Turn LEDs off: `ledctl off`
-- Set built-in LED modes: `ledctl setmode {cycle,rainbow,breathing,off,auto}`
-- Run custom pattern hacks: `ledctl pattern {stillred,stillblue,breathered,alarm}`
+- Set built-in LED modes: `ledctl setmode --mode {cycle,rainbow,breathing,off,auto}`
+- Run custom pattern hacks: `ledctl setpattern --pattern {stillred,stillblue,breathered,alarm}`
 - Launch interactive wizard: `ledctl wiz`
 - Auto-detect common CH340/CH341 serial adapters
 - Override serial port, baud, DTR, RTS, and inter-byte delay
@@ -67,25 +67,19 @@ ledctl off
 Run a built-in mode explicitly:
 
 ```bash
-ledctl setmode cycle -b 1 -s 3
+ledctl setmode --mode cycle -b 1 -s 3
 ```
 
-Run a custom pattern with a fixed device path:
+Run a custom pattern (always runs in the background, shell returns immediately):
 
 ```bash
-ledctl pattern alarm --port /dev/serial/by-id/usb-...
-```
-
-Run a pattern in the background (detached from the terminal):
-
-```bash
-ledctl pattern stillblue --background
+ledctl setpattern --pattern alarm --port /dev/serial/by-id/usb-...
 ```
 
 Patterns work by repeatedly re-sending mode frames, so they need a running
-process. `--background` detaches that process so you get your shell back.
-The next `ledctl off`, `ledctl setmode`, `ledctl pattern`, or `ledctl wiz`
-automatically kills the background pattern before sending its own command.
+process. `setpattern` detaches that process automatically. The next
+`ledctl off`, `ledctl setmode`, `ledctl setpattern`, or `ledctl wiz`
+kills the previous pattern before sending its own command.
 
 ## Device access
 
@@ -133,7 +127,7 @@ sudo udevadm trigger
 Then use:
 
 ```bash
-ledctl setmode breathing -p /dev/ledctl -B 10000 -t -R -d 0.005
+ledctl setmode --mode breathing --port /dev/ledctl --baud 10000 -t --no-rts -d 0.005
 ```
 
 ## Troubleshooting
@@ -160,7 +154,7 @@ Try a different cable, a different port, and avoid hubs while testing.
 Use a fixed by-id path:
 
 ```bash
-ledctl setmode cycle -b 1 -s 3 --port /dev/serial/by-id/usb-...
+ledctl setmode --mode cycle -b 1 -s 3 --port /dev/serial/by-id/usb-...
 ```
 
 ### Timing problems
@@ -168,36 +162,35 @@ ledctl setmode cycle -b 1 -s 3 --port /dev/serial/by-id/usb-...
 If the device responds sluggishly or inconsistently, adjust the inter-byte delay:
 
 ```bash
-ledctl setmode breathing -d 0.002
-ledctl setmode breathing -d 0.008
+ledctl setmode --mode breathing -d 0.002
+ledctl setmode --mode breathing -d 0.008
 ```
 
 ## CLI notes
 
-Global pattern controls:
+Serial controls (all subcommands):
 
 ```text
---background / -g    run detached until killed by the next ledctl command
-```
-
-Serial controls:
-
-```text
--p, --port PATH
--B, --baud INT
--t, --dtr / -T, --no-dtr
--r, --rts / -R, --no-rts
+--port PATH
+--baud INT
+--dtr / --no-dtr
+--rts / --no-rts
 -d, --delay SEC
 ```
 
-Pattern-common controls when supported by the pattern implementation:
+setmode controls:
 
 ```text
+--mode {rainbow,breathing,cycle,off,auto}  (required)
 -b, --brightness 1..5
 -s, --speed 1..5
---period SEC
---mode-num BYTE
---hz FLOAT
+```
+
+setpattern controls:
+
+```text
+--pattern {stillred,stillblue,breathered,alarm}  (required)
+-b, --brightness 1..5
 ```
 
 ## Security

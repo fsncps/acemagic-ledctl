@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the others were non-documented extras. `ledctl wiz`/bare `ledctl` still launch the TUI.
 - `--mode breath` (use `breathing`). No alias.
 - Wizard's `-d`/`--dev` (use `--port`).
+- `ledctl setmode --mode-num` and `--hz` (raw byte and repeat loop — patterns handle both now).
+- `ledctl setpattern --speed`, `--hz`, `--period`, `--mode-num`, `--background`/`-g`
+  (patterns use their own defaults; background is now the default behavior).
 
 ### Changed
 - Mode-name vocabulary standardised on `breathing` everywhere.
@@ -22,15 +25,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `ledctl setmode -b`/`-s` now reject out-of-range values (1..5) at parse time via `choices`.
 - `--help` after a subcommand now shows that subcommand's real serial flags (stub parsers
   in `__main__.py` no longer swallow `--help`).
+- Subcommand `pattern` renamed to `setpattern`; pattern name is now `--pattern` flag
+  (mirrors `setmode --mode`).
+- `ledctl setmode --mode` is now required (no silent default to cycle).
+- Console script `ledctl-pattern` renamed to `ledctl-setpattern`.
+- `LedCtl.refresh_mode()` removed (dead code after `--hz` removal).
 
 ### Added
 - `ledctl.core.find_ports()` (plural) and `MODES`/`MODE_NAMES` name registry.
 - `ledctl.cli.common.make_serial_parser()` shared parent parser for serial flags.
 - `tests/conftest.py` registry tripwire guarding `MODES` against drift from `MODE`.
-- `ledctl pattern --background`/`-g`: detach the pattern loop from the terminal
-  so it persists until the next `ledctl` command. `ledctl off`, `setmode`,
-  `pattern`, and `wiz` auto-kill any running background pattern via PID file
-  (`/tmp/ledctl-pattern.pid`) before opening the serial port.
+- `ledctl setpattern` always runs in the background (daemonized via double-fork,
+  PID file at `/tmp/ledctl-pattern.pid`). `ledctl off`, `setmode`, `setpattern`,
+  and `wiz` auto-kill any running background pattern before opening the serial port.
 - Wizard no longer sends OFF on quit — the last-applied mode persists.
 
 ## [0.3.0] - 2026-04-18
