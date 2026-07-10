@@ -8,9 +8,8 @@
 Thumbs.db
 .env
 node_modules/
+build/
 dist/
 __pycache__/
-*/plans/
-*/plan/
 *.egg-info/
 AGENTS.md
