@@ -9,6 +9,7 @@ import argparse
 
 from ledctl.cli.common import make_serial_parser
 from ledctl.core import LedCtl, MODE
+from ledctl.daemon import kill_running_pattern
 
 
 def parse_args(argv=None):
@@ -22,6 +23,7 @@ def parse_args(argv=None):
 
 def main(argv=None):
     args = parse_args(argv)
+    kill_running_pattern()
     with LedCtl(
         port=args.port, baud=args.baud, ib_delay=args.ib_delay, dtr=args.dtr, rts=args.rts
     ) as ctl:

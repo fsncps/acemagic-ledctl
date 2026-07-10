@@ -9,6 +9,7 @@ from ledctl.core import (
     MODE_NAMES,
     find_ports,
 )
+from ledctl.daemon import kill_running_pattern
 
 
 def parse_args(argv=None):
@@ -105,7 +106,6 @@ def tui(dev, dtr, rts, delay):
         while True:
             key = stdscr.getch()
             if key in (ord("q"), ord("Q")):
-                off()
                 break
             elif key == curses.KEY_UP:
                 idx = (idx - 1) % 10
@@ -133,7 +133,6 @@ def tui(dev, dtr, rts, delay):
                 elif idx == 8:
                     blink_test()
                 elif idx == 9:
-                    off()
                     return
                 else:
                     apply()
@@ -190,10 +189,6 @@ def text_interactive(dev, dtr, rts, delay):
             )
             c = input("> ").strip().lower()
             if c == "q":
-                try:
-                    ctl.set_mode_once(MODES["off"], cur_b, cur_s)
-                except Exception:
-                    pass
                 break
             elif c == "t":
                 print("Modes:", ", ".join(MODE_NAMES))
@@ -229,6 +224,7 @@ def text_interactive(dev, dtr, rts, delay):
 
 def main(argv=None):
     args = parse_args(argv)
+    kill_running_pattern()
     tui(args.port, args.dtr, args.rts, args.ib_delay)
     return 0
 

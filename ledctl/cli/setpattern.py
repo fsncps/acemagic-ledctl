@@ -1,6 +1,13 @@
 import argparse
 
 from ledctl.cli.common import make_serial_parser
+from ledctl.daemon import (
+    daemonize,
+    install_sigterm_handler,
+    kill_running_pattern,
+    write_pid,
+    _remove_pid_file,
+)
 from ledctl.patterns import list_patterns, run_pattern
 
 
@@ -11,6 +18,13 @@ def parse_args(argv=None):
         parents=[make_serial_parser()],
     )
     p.add_argument("name", choices=list_patterns(), help="Pattern name")
+    p.add_argument(
+        "--background",
+        "-g",
+        action="store_true",
+        help="Detach from the terminal and run in the background "
+        "until killed by another ledctl command",
+    )
     p.add_argument("--hz", type=float, default=None, help="Refresh frequency (if applicable)")
     p.add_argument("--brightness", "-b", type=int, default=None, help="1..5 human scale")
     p.add_argument("--speed", "-s", type=int, default=None, help="1..5 human scale")
@@ -31,16 +45,38 @@ def parse_args(argv=None):
 
 def main(argv=None):
     args = parse_args(argv)
-    run_pattern(
-        args.name,
-        port=args.port,
-        baud=args.baud,
-        ib_delay=args.ib_delay,
-        dtr=args.dtr,
-        rts=args.rts,
-        hz=args.hz,
-        brightness=args.brightness,
-        speed=args.speed,
-        period=args.period,
-        mode_num=args.mode_num,
-    )
+    kill_running_pattern()
+    if args.background:
+        daemonize()
+        write_pid()
+        install_sigterm_handler()
+        try:
+            run_pattern(
+                args.name,
+                port=args.port,
+                baud=args.baud,
+                ib_delay=args.ib_delay,
+                dtr=args.dtr,
+                rts=args.rts,
+                hz=args.hz,
+                brightness=args.brightness,
+                speed=args.speed,
+                period=args.period,
+                mode_num=args.mode_num,
+            )
+        finally:
+            _remove_pid_file()
+    else:
+        run_pattern(
+            args.name,
+            port=args.port,
+            baud=args.baud,
+            ib_delay=args.ib_delay,
+            dtr=args.dtr,
+            rts=args.rts,
+            hz=args.hz,
+            brightness=args.brightness,
+            speed=args.speed,
+            period=args.period,
+            mode_num=args.mode_num,
+        )
