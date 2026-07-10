@@ -167,6 +167,45 @@ def test_main_no_args_defaults_to_wiz(monkeypatch):
     mock_wiz.assert_called_once_with([])
 
 
+# -- pattern-wiz tests --
+
+
+def test_pattern_wiz_parse_args_defaults():
+    from ledctl.cli.pattern_wiz import parse_args
+
+    args = parse_args([])
+    assert args.ib_delay == 0.005
+    assert args.baud == 10000
+    assert args.dtr is True
+    assert args.rts is False
+    assert args.port is None
+
+
+def test_pattern_wiz_main_calls_tui(monkeypatch):
+    import ledctl.cli.pattern_wiz as pw
+
+    called = {}
+
+    def fake_tui(port, dtr, rts, delay):
+        called["args"] = (port, dtr, rts, delay)
+
+    monkeypatch.setattr(pw, "tui", fake_tui)
+    monkeypatch.setattr(pw, "kill_running_pattern", MagicMock())
+    rc = pw.main(["--baud", "12000"])
+    assert rc == 0
+    assert called["args"][1] is True
+
+
+def test_pattern_wiz_main_kills_running_pattern(monkeypatch):
+    import ledctl.cli.pattern_wiz as pw
+
+    killed = MagicMock()
+    monkeypatch.setattr(pw, "kill_running_pattern", killed)
+    monkeypatch.setattr(pw, "tui", MagicMock())
+    pw.main([])
+    killed.assert_called_once()
+
+
 # -- daemon integration tests --
 
 

@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- `ledctl pattern-wiz`: live pattern sequencer TUI — cycle through up to 5 mode
+  slots with per-slot duration, Hz, brightness, and speed. All changes take
+  effect immediately during playback.
+
 ## [0.4.0] - 2026-07-10
 
 ### Removed

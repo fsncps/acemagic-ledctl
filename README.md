@@ -24,6 +24,7 @@ When you don't immediately nuke the Windows off one of the ACEMAGIC mini compute
 - Set built-in LED modes: `ledctl setmode --mode {cycle,rainbow,breathing,off,auto}`
 - Run custom pattern hacks: `ledctl setpattern --pattern {stillred,stillblue,breathered,alarm}`
 - Launch interactive wizard: `ledctl wiz`
+- Live pattern sequencer: `ledctl pattern-wiz`
 - Auto-detect common CH340/CH341 serial adapters
 - Override serial port, baud, DTR, RTS, and inter-byte delay
 
