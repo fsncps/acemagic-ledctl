@@ -1,12 +1,13 @@
 import time
 
-from ledctl.core import LedCtl, MODE
+from ledctl.core import BAUD_DEFAULT, IB_DELAY_DEFAULT, LedCtl, MODE
 
 
 def run(
     *,
     port=None,
-    baud=10000,
+    baud=BAUD_DEFAULT,
+    ib_delay=IB_DELAY_DEFAULT,
     dtr=True,
     rts=False,
     hz: float = None,
@@ -18,14 +19,13 @@ def run(
     """
     Force a stable blue/purple by repeatedly resetting RAINBOW (which starts blue/purple).
     Default to 40 Hz like stillred.
-    NOTE: Verify MODE.RAINBOW on your device (override with --mode-num if needed).
     """
     hz = 40.0 if hz is None else hz
     brightness = 1 if brightness is None else brightness
     speed = 1 if speed is None else speed
     mode = mode_num if mode_num is not None else MODE.RAINBOW
 
-    with LedCtl(port=port, baud=baud, dtr=dtr, rts=rts) as ctl:
+    with LedCtl(port=port, baud=baud, ib_delay=ib_delay, dtr=dtr, rts=rts) as ctl:
         try:
             nxt = time.monotonic()
             interval = 1.0 / hz if hz > 0 else 0.0
