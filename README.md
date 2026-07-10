@@ -76,6 +76,17 @@ Run a custom pattern with a fixed device path:
 ledctl pattern alarm --port /dev/serial/by-id/usb-...
 ```
 
+Run a pattern in the background (detached from the terminal):
+
+```bash
+ledctl pattern stillblue --background
+```
+
+Patterns work by repeatedly re-sending mode frames, so they need a running
+process. `--background` detaches that process so you get your shell back.
+The next `ledctl off`, `ledctl setmode`, `ledctl pattern`, or `ledctl wiz`
+automatically kills the background pattern before sending its own command.
+
 ## Device access
 
 On many systems the serial device is owned by a group such as `dialout` or `uucp`. Add your user to the correct group and start a new shell.
@@ -166,8 +177,7 @@ ledctl setmode breathing -d 0.008
 Global pattern controls:
 
 ```text
---background / -g
---no-kill-existing
+--background / -g    run detached until killed by the next ledctl command
 ```
 
 Serial controls:

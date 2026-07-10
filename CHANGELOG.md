@@ -27,6 +27,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `ledctl.core.find_ports()` (plural) and `MODES`/`MODE_NAMES` name registry.
 - `ledctl.cli.common.make_serial_parser()` shared parent parser for serial flags.
 - `tests/conftest.py` registry tripwire guarding `MODES` against drift from `MODE`.
+- `ledctl pattern --background`/`-g`: detach the pattern loop from the terminal
+  so it persists until the next `ledctl` command. `ledctl off`, `setmode`,
+  `pattern`, and `wiz` auto-kill any running background pattern via PID file
+  (`/tmp/ledctl-pattern.pid`) before opening the serial port.
+- Wizard no longer sends OFF on quit — the last-applied mode persists.
 
 ## [0.3.0] - 2026-04-18
 
@@ -56,5 +61,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Custom patterns: stillred, stillblue, breathered, alarm
 - CH340/CH341 auto-detection
 - Serial tuning flags: port, baud, DTR, RTS, inter-byte delay
-- Background pattern execution with `--background`
 - Interactive curses wizard (ledctl wiz)
