@@ -105,12 +105,3 @@ class LedCtl:
 
     def set_mode_once(self, mode: int, brightness: int = 3, speed: int = 3):
         self._write_frame(mode, brightness, speed)
-
-    def refresh_mode(self, mode: int, brightness: int, speed: int, hz: float):
-        """
-        Re-send a mode frame periodically at `hz` (e.g., the “reset hacks”).
-        Call in a loop externally, or use helper patterns.
-        """
-        self._write_frame(mode, brightness, speed)
-        if hz > 0:
-            time.sleep(max(0.0, 1.0 / hz))

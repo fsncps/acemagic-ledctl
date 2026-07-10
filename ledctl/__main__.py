@@ -9,9 +9,9 @@ from ledctl.cli.wizard import main as wizard_main
 def main():
     epilog = """\
 Commands:
-  ledctl wizard [SERIAL_FLAGS]                # bare `ledctl` is an alias
-  ledctl setmode <mode> [SERIAL_FLAGS] [-b N] [-s N] [--hz HZ]
-  ledctl setpattern <pattern> [SERIAL_FLAGS] [-b N] [-s N] [--period SEC]
+  ledctl wizard [SERIAL_FLAGS]                      # bare `ledctl` is an alias
+  ledctl setmode --mode <mode> [SERIAL_FLAGS] [-b N] [-s N]
+  ledctl setpattern --pattern <name> [SERIAL_FLAGS] [-b N]
   ledctl off [SERIAL_FLAGS]
 
 Serial flags (after the subcommand): --port, --baud, --dtr/--no-dtr,
@@ -26,10 +26,10 @@ Serial flags (after the subcommand): --port, --baud, --dtr/--no-dtr,
     sub = parser.add_subparsers(dest="cmd")
 
     sub.add_parser("off", help="turn LEDs off", add_help=False)
-    sub.add_parser("setmode", help="send a single mode frame or repeat", add_help=False)
+    sub.add_parser("setmode", help="set a built-in LED mode", add_help=False)
     sub.add_parser(
-        "pattern",
-        help="run a predefined pattern (see --help for the list)",
+        "setpattern",
+        help="run a predefined pattern in the background",
         add_help=False,
     )
     sub.add_parser("wiz", help="interactive curses TUI", add_help=False)
@@ -38,7 +38,7 @@ Serial flags (after the subcommand): --port, --baud, --dtr/--no-dtr,
     dispatch = {
         "off": off_main,
         "setmode": setmode_main,
-        "pattern": pattern_main,
+        "setpattern": pattern_main,
         "wiz": wizard_main,
     }
     if args.cmd is None:

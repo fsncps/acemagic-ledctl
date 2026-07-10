@@ -36,7 +36,7 @@ Issues = "https://github.com/fsncps/acemagic-ledctl/issues"
 ledctl = "ledctl.__main__:main"
 ledctl-setmode = "ledctl.cli.setmode:main"
 ledctl-off = "ledctl.cli.off:main"
-ledctl-pattern = "ledctl.cli.setpattern:main"
+ledctl-setpattern = "ledctl.cli.setpattern:main"
 ledctl-wizard = "ledctl.cli.wizard:main"
 
 [project.optional-dependencies]

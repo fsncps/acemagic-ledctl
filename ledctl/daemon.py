@@ -2,13 +2,13 @@
 
 Patterns (stillred, stillblue, ...) work by repeatedly re-sending mode frames
 to interrupt the LED firmware's natural mode progression.  They need a running
-process.  ``--background`` / ``-g`` on ``ledctl pattern`` detaches that loop
-from the terminal so it persists until the next ``ledctl`` command kills it.
+process.  ``ledctl setpattern`` detaches that loop from the terminal so it persists
+until the next ``ledctl`` command kills it.
 
 PID file at ``PID_FILE`` tracks the single background pattern.  ``ledctl off``,
-``ledctl setmode``, and ``ledctl wiz`` all call ``kill_running_pattern()``
-before opening the serial port — otherwise the background pattern would keep
-re-sending and override the new command.
+``ledctl setmode``, ``ledctl setpattern``, and ``ledctl wiz`` all call
+``kill_running_pattern()`` before opening the serial port — otherwise the
+background pattern would keep re-sending and override the new command.
 """
 
 import os
@@ -27,7 +27,7 @@ def _is_running(pid: int) -> bool:
     return True
 
 
-def _remove_pid_file():
+def remove_pid_file():
     try:
         os.remove(PID_FILE)
     except FileNotFoundError:
@@ -45,7 +45,7 @@ def read_pid():
     except (FileNotFoundError, ValueError):
         return None
     if not _is_running(pid):
-        _remove_pid_file()
+        remove_pid_file()
         return None
     return pid
 
@@ -67,7 +67,7 @@ def kill_running_pattern(timeout: float = 2.0):
     try:
         os.kill(pid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
-        _remove_pid_file()
+        remove_pid_file()
         return
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -79,7 +79,7 @@ def kill_running_pattern(timeout: float = 2.0):
             os.kill(pid, signal.SIGKILL)
         except (ProcessLookupError, PermissionError):
             pass
-    _remove_pid_file()
+    remove_pid_file()
 
 
 def daemonize():
