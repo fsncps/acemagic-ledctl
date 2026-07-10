@@ -21,15 +21,28 @@ MODE = SimpleNamespace(
 
 LEVEL_TO_WIRE = {1: 0x05, 2: 0x04, 3: 0x03, 4: 0x02, 5: 0x01}
 
+MODES = {
+    "rainbow": MODE.RAINBOW,
+    "breathing": MODE.BREATH,
+    "cycle": MODE.CYCLE,
+    "off": MODE.OFF,
+    "auto": MODE.AUTO,
+}
+MODE_NAMES = list(MODES.keys())
 
-def find_port() -> Optional[str]:
-    """Find the CH340 port deterministically if possible."""
-    paths = (
+
+def find_ports() -> list:
+    """Return all candidate CH340/tty ports, deterministically ordered."""
+    return (
         sorted(glob.glob("/dev/serial/by-path/*-if00-port0"))
         or sorted(glob.glob("/dev/ttyUSB*"))
         or sorted(glob.glob("/dev/ttyACM*"))
     )
-    return paths[0] if paths else None
+
+
+def find_port() -> Optional[str]:
+    """Find a single CH340 port deterministically (first match or None)."""
+    return (find_ports() or [None])[0]
 
 
 class LedCtl:
