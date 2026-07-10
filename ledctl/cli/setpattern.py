@@ -1,17 +1,16 @@
 import argparse
-from ledctl.patterns import run_pattern, list_patterns
+
+from ledctl.cli.common import make_serial_parser
+from ledctl.patterns import list_patterns, run_pattern
 
 
 def parse_args(argv=None):
-    p = argparse.ArgumentParser(prog="ledctl-pattern", description="Run a predefined pattern.")
+    p = argparse.ArgumentParser(
+        prog="ledctl-pattern",
+        description="Run a predefined pattern.",
+        parents=[make_serial_parser()],
+    )
     p.add_argument("name", choices=list_patterns(), help="Pattern name")
-    p.add_argument("--port", help="Serial device (auto-detect if omitted)")
-    p.add_argument("--baud", type=int, default=10000)
-    p.add_argument("--dtr", dest="dtr", action="store_true", default=True)
-    p.add_argument("--no-dtr", dest="dtr", action="store_false")
-    p.add_argument("--rts", dest="rts", action="store_true", default=False)
-    p.add_argument("--no-rts", dest="rts", action="store_false")
-    # generic knobs many patterns honor:
     p.add_argument("--hz", type=float, default=None, help="Refresh frequency (if applicable)")
     p.add_argument("--brightness", "-b", type=int, default=None, help="1..5 human scale")
     p.add_argument("--speed", "-s", type=int, default=None, help="1..5 human scale")
@@ -36,6 +35,7 @@ def main(argv=None):
         args.name,
         port=args.port,
         baud=args.baud,
+        ib_delay=args.ib_delay,
         dtr=args.dtr,
         rts=args.rts,
         hz=args.hz,

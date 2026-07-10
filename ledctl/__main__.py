@@ -7,16 +7,32 @@ from ledctl.cli.wizard import main as wizard_main
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="ledctl", add_help=True)
+    epilog = """\
+Commands:
+  ledctl wizard [SERIAL_FLAGS]                # bare `ledctl` is an alias
+  ledctl setmode <mode> [SERIAL_FLAGS] [-b N] [-s N] [--hz HZ]
+  ledctl setpattern <pattern> [SERIAL_FLAGS] [-b N] [-s N] [--period SEC]
+  ledctl off [SERIAL_FLAGS]
+
+Serial flags (after the subcommand): --port, --baud, --dtr/--no-dtr,
+--rts/--no-rts, -d/--delay.
+"""
+    parser = argparse.ArgumentParser(
+        prog="ledctl",
+        add_help=True,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=epilog,
+    )
     sub = parser.add_subparsers(dest="cmd")
 
-    sub.add_parser("off", help="turn LEDs off")
-    sub.add_parser("setmode", help="send a single mode frame or repeat")
+    sub.add_parser("off", help="turn LEDs off", add_help=False)
+    sub.add_parser("setmode", help="send a single mode frame or repeat", add_help=False)
     sub.add_parser(
         "pattern",
-        help="run a predefined pattern (stillred, stillblue, breathered, alarm)",
+        help="run a predefined pattern (see --help for the list)",
+        add_help=False,
     )
-    sub.add_parser("wiz", help="interactive curses TUI")
+    sub.add_parser("wiz", help="interactive curses TUI", add_help=False)
 
     args, rest = parser.parse_known_args()
     dispatch = {
