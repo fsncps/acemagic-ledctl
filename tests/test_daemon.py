@@ -24,12 +24,12 @@ def test_write_and_read_pid():
     with patch("ledctl.daemon.PID_FILE", "/tmp/ledctl-test-rw.pid"):
         d.write_pid()
         assert d.read_pid() == os.getpid()
-        d._remove_pid_file()
+        d.remove_pid_file()
 
 
 def test_remove_pid_file_missing_is_noop():
     with patch("ledctl.daemon.PID_FILE", "/tmp/ledctl-test-noop.pid"):
-        d._remove_pid_file()  # should not raise
+        d.remove_pid_file()  # should not raise
 
 
 def test_kill_running_pattern_no_pid_file():
