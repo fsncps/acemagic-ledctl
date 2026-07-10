@@ -189,3 +189,88 @@ def test_main_no_args_defaults_to_wiz(monkeypatch):
     mod.main()
 
     mock_wiz.assert_called_once_with([])
+
+
+# -- daemon integration tests --
+
+
+def test_off_main_kills_running_pattern(monkeypatch):
+    import ledctl.cli.off as off_mod
+
+    killed = MagicMock()
+    monkeypatch.setattr(off_mod, "kill_running_pattern", killed)
+    monkeypatch.setattr(off_mod, "LedCtl", MagicMock())
+    off_mod.main([])
+    killed.assert_called_once()
+
+
+def test_setmode_main_kills_running_pattern(monkeypatch):
+    import ledctl.cli.setmode as sm_mod
+
+    killed = MagicMock()
+    monkeypatch.setattr(sm_mod, "kill_running_pattern", killed)
+    monkeypatch.setattr(sm_mod, "LedCtl", MagicMock())
+    sm_mod.main(["--mode", "cycle"])
+    killed.assert_called_once()
+
+
+def test_wiz_main_kills_running_pattern(monkeypatch):
+    import ledctl.cli.wizard as w
+
+    killed = MagicMock()
+    monkeypatch.setattr(w, "kill_running_pattern", killed)
+    monkeypatch.setattr(w, "tui", MagicMock())
+    w.main([])
+    killed.assert_called_once()
+
+
+def test_setpattern_foreground_no_daemonize(monkeypatch):
+    import ledctl.cli.setpattern as sp
+
+    monkeypatch.setattr(sp, "kill_running_pattern", MagicMock())
+    daemonize_mock = MagicMock()
+    monkeypatch.setattr(sp, "daemonize", daemonize_mock)
+    monkeypatch.setattr(sp, "run_pattern", MagicMock())
+    sp.main(["alarm"])
+    daemonize_mock.assert_not_called()
+
+
+def test_setpattern_background_calls_daemonize(monkeypatch):
+    import ledctl.cli.setpattern as sp
+
+    monkeypatch.setattr(sp, "kill_running_pattern", MagicMock())
+    daemonize_mock = MagicMock()
+    write_pid_mock = MagicMock()
+    sigterm_mock = MagicMock()
+    run_mock = MagicMock()
+    remove_mock = MagicMock()
+    monkeypatch.setattr(sp, "daemonize", daemonize_mock)
+    monkeypatch.setattr(sp, "write_pid", write_pid_mock)
+    monkeypatch.setattr(sp, "install_sigterm_handler", sigterm_mock)
+    monkeypatch.setattr(sp, "run_pattern", run_mock)
+    monkeypatch.setattr(sp, "_remove_pid_file", remove_mock)
+
+    sp.main(["alarm", "--background"])
+
+    daemonize_mock.assert_called_once()
+    write_pid_mock.assert_called_once()
+    sigterm_mock.assert_called_once()
+    run_mock.assert_called_once()
+    remove_mock.assert_called_once()
+
+
+def test_setpattern_background_short_flag():
+    from ledctl.cli.setpattern import parse_args as sp_parse_args
+
+    args = sp_parse_args(["alarm", "-g"])
+    assert args.background is True
+
+
+def test_setpattern_always_kills_existing(monkeypatch):
+    import ledctl.cli.setpattern as sp
+
+    killed = MagicMock()
+    monkeypatch.setattr(sp, "kill_running_pattern", killed)
+    monkeypatch.setattr(sp, "run_pattern", MagicMock())
+    sp.main(["alarm"])
+    killed.assert_called_once()
