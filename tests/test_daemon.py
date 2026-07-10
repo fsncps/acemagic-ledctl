@@ -56,6 +56,7 @@ def test_kill_running_pattern_kills(monkeypatch):
         monkeypatch.setattr(d, "read_pid", lambda: pid)
         monkeypatch.setattr(d, "_is_running", lambda p: False)
         monkeypatch.setattr("os.kill", lambda sig_pid, sig: kills.append((sig_pid, sig)))
+        monkeypatch.setattr("time.sleep", lambda _: None)
 
         d.kill_running_pattern()
         assert (pid, signal.SIGTERM) in kills

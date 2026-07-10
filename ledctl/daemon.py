@@ -18,6 +18,12 @@ import time
 
 PID_FILE = "/tmp/ledctl-pattern.pid"
 
+# Time to let the LED controller's UART parser reset after the pattern process
+# is killed.  Without this, the pattern's last partial frame leaves the parser
+# mid-frame; the next command's leading bytes get consumed to complete it,
+# swallowing the first command and requiring a second invocation.
+PORT_SETTLE_DELAY = 0.2
+
 
 def _is_running(pid: int) -> bool:
     try:
@@ -80,6 +86,7 @@ def kill_running_pattern(timeout: float = 2.0):
         except (ProcessLookupError, PermissionError):
             pass
     remove_pid_file()
+    time.sleep(PORT_SETTLE_DELAY)
 
 
 def daemonize():
