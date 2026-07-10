@@ -38,6 +38,7 @@ ledctl-setmode = "ledctl.cli.setmode:main"
 ledctl-off = "ledctl.cli.off:main"
 ledctl-setpattern = "ledctl.cli.setpattern:main"
 ledctl-wizard = "ledctl.cli.wizard:main"
+ledctl-pattern-wiz = "ledctl.cli.pattern_wiz:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "ruff>=0.1"]
